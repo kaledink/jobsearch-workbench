@@ -153,6 +153,7 @@ async function fillApply(id) {
 }
 let deepCtl = null;
 async function runDeep(id) {
+  if (S.local) return localDeep(id);
   const a = appById(id); if (!a) return; const k = "prep-" + id;
   S.logs[k] = []; setBusy(k, true); deepCtl = new AbortController();
   let tab = null; let n = 0;
@@ -229,9 +230,13 @@ async function upsertCompanies(rows, source) {
 async function importFile(file) {
   setBusy("import", "读取文件…"); toast("正在导入 " + file.name);
   try {
-    await loadScript(LIBS.xlsx);
-    const wb = window.XLSX.read(await file.arrayBuffer(), { type: "array" });
-    const raw = window.XLSX.utils.sheet_to_json(wb.Sheets[wb.SheetNames[0]], { defval: "" });
+    let raw;
+    if (/\.csv$/i.test(file.name)) raw = parseCSV(await file.text());
+    else {
+      await loadScript(LIBS.xlsx);
+      const wb = window.XLSX.read(await file.arrayBuffer(), { type: "array" });
+      raw = window.XLSX.utils.sheet_to_json(wb.Sheets[wb.SheetNames[0]], { defval: "" });
+    }
     if (!raw.length) { toast("表格是空的。", true); setBusy("import", false); return; }
     const heads = Object.keys(raw[0]); const map = {};
     for (const h of heads) for (const [k, re] of CO_MAP) if (!Object.values(map).includes(k) && re.test(h)) { map[h] = k; break; }
@@ -332,7 +337,7 @@ async function feishuSync() {
 function postModal() {
   S.postImgs = [];
   modal(`<h2>从招聘推送添加单位</h2>
-  <p class="note" style="margin:0">把公众号推送、官网公告或就业网通知的正文粘贴进来，也可以只给链接或上传截图。Claude 会提取单位、岗位、报名时间、要求，并给出匹配度。</p>
+  <p class="note" style="margin:0">把公众号推送、官网公告或就业网通知的正文粘贴进来，也可以只给链接或上传截图。AI 会提取单位、岗位、报名时间、要求，并给出匹配度。</p>
   <label class="f"><span>推送正文（可选）</span><textarea id="pp-text" style="min-height:160px" placeholder="粘贴招聘推送全文"></textarea></label>
   <label class="f"><span>链接（可选）</span><input type="url" id="pp-url" placeholder="https://mp.weixin.qq.com/…"></label>
   <label class="f"><span>截图（可选，可多张）</span><input type="file" id="pp-img" accept="image/png,image/jpeg,image/webp" multiple></label>
@@ -346,10 +351,11 @@ async function runPost() {
   const lg = $("#log-post"); lg.hidden = false; const say = s => { lg.textContent += (lg.textContent ? "\n" : "") + s; };
   try {
     let body = text;
+    if (S.github) for (const file of files) await archiveFile(file);
     if (!body && url && S.hostOK) { say("用内置浏览器打开链接读取正文…"); const tab = await openTab(url); await sleep(3000); body = (await pageText(tab, 30000)).slice(0, 30000); }
     let images;
     if (files.length) { const lim = await S.sample.limits().catch(() => null); if (lim && lim.images) images = files.slice(0, lim.images.maxCount || 5); else say("当前环境不支持识别图片，只用文字。"); }
-    if (!body && !images) throw new Error(url ? "读不到链接内容：请在 Claude 桌面 App 中使用，或直接粘贴正文。" : "没有可识别的内容。");
+    if (!body && !images) throw new Error(url ? "此链接未读取：请直接粘贴招聘正文，或上传截图。" : "没有可识别的内容。");
     say("提取招聘信息并评估匹配度…");
     const r = await ai(`下面是一条招聘推送（可能是文字、截图或网页正文）。请提取信息并评估与候选人的匹配度。只根据推送原文提取，原文没有的字段留空，不要编造日期。今天是 ${today()}。
 候选人：${JSON.stringify(profileBrief())}
@@ -412,7 +418,12 @@ async function setStatus(id, status) {
   if (EVENT_STAGES.has(status)) scheduleModal({ ...a, status }, status);
 }
 const ACT = {
-  go: t => { S.view = t.dataset.v; S.appId = null; try { localStorage.setItem("jd_view", S.view); } catch (e) {} window.scrollTo(0, 0); render(); },
+  githubLogout, uploadFiles: uploadCloudFiles,
+  previewFile: t => openCloudFile(t.dataset.id, true), downloadFile: t => openCloudFile(t.dataset.id),
+  localSettings, testAI, restoreData, localJobs,
+  backupData: async () => { const data = await api("/api/backup"); await saveFile("求职工作台备份-" + today() + ".json", JSON.stringify(data, null, 2)); },
+  copyField: async t => { await navigator.clipboard.writeText(S.copyFields[+t.dataset.i][1]); toast("已复制。"); },
+  go: t => { if (S.profileDirty && S.view === "profile" && !confirm("报名信息尚未保存，确定放弃修改？")) return; S.profileDirty = false; S.view = t.dataset.v; S.appId = null; try { localStorage.setItem("jd_view", S.view); } catch (e) {} window.scrollTo(0, 0); render(); },
   newApp: () => newAppModal(),
   closeModal, modalBg: (t, e) => { if (e.target === t) closeModal(); },
   async createApp(t) {
@@ -452,7 +463,7 @@ const ACT = {
   fillApply: t => fillApply(t.dataset.id),
   runDeep: t => runDeep(t.dataset.id),
   stopDeep: () => deepCtl && deepCtl.abort(),
-  async queueDeep(t) { const a = appById(t.dataset.id); await db.set("queue/" + uid(), { type: "deep", applicationId: a.id, label: `面试深度分析：${a.company} ${a.role || ""}`, status: "pending", createdAt: new Date().toISOString() }); toast("已交给 Claude。在对话里说「处理求职队列」可以立刻开始。"); },
+  async queueDeep(t) { const a = appById(t.dataset.id); await db.set("queue/" + uid(), { type: "deep", applicationId: a.id, label: `面试深度分析：${a.company} ${a.role || ""}`, status: "pending", createdAt: new Date().toISOString() }); toast("已加入待处理任务，请在总览中点击开始分析。"); },
   dropQ: async t => { await db.del("queue/" + t.dataset.id); },
   schedule: t => scheduleModal(appById(t.dataset.id), appById(t.dataset.id).status),
   scParse: () => parseNotice(),
@@ -505,10 +516,17 @@ const ACT = {
   async delExp(t) { if (t.dataset.confirm !== "1") { t.dataset.confirm = "1"; t.textContent = "再点一次确认删除"; return; } await db.del("experiences/" + t.dataset.id); closeModal(); },
   viewResume: t => { const r = byId("resumes", t.dataset.id); modal(`<h2>${esc(r.title)}</h2><div class="log" style="max-height:60vh;color:var(--ink)">${esc(r.text)}</div><div class="row" style="justify-content:flex-end"><button class="btn" data-act="closeModal">关闭</button></div>`, true); },
   async delResume(t) { if (t.dataset.confirm !== "1") { t.dataset.confirm = "1"; t.textContent = "确认删除"; return; } await db.del("resumes/" + t.dataset.id); },
-  async saveProfile() { const p = readProfileForm(); p.updatedAt = new Date().toISOString(); await db.set("profile/main", p); S.profileDirty = false; toast("报名信息已保存。"); render(); },
-  addEdu: () => { const p = readProfileForm(); p.education.push({}); S.d.profile = { ...(S.d.profile || {}), ...p }; S.profileDirty = true; render(); },
-  delEdu: t => { const p = readProfileForm(); p.education.splice(+t.dataset.i, 1); S.d.profile = { ...(S.d.profile || {}), ...p }; S.profileDirty = true; render(); },
-  addQA: () => { const p = readProfileForm(); p.qa.push({}); S.d.profile = { ...(S.d.profile || {}), ...p }; S.profileDirty = true; render(); },
+  async saveProfile(t) {
+    if (t.disabled) return;
+    const p = readProfileForm(); p.updatedAt = new Date().toISOString();
+    const fields = [...$("#pf").querySelectorAll("input,textarea,select,button")];
+    t.disabled = true; t.textContent = "保存中…"; fields.forEach(el => { el.disabled = true; });
+    try { await db.set("profile/main", p); S.profileDirty = false; toast("报名信息已保存。"); render(); }
+    finally { fields.forEach(el => { el.disabled = false; }); if (t.isConnected) { t.disabled = false; t.textContent = "保存"; } }
+  },
+  addEdu: () => { const p = readProfileForm(); p.education.push({}); S.d.profile = { ...(S.d.profile || {}), ...p }; S.profileDirty = true; render(true); },
+  delEdu: t => { const p = readProfileForm(); p.education.splice(+t.dataset.i, 1); S.d.profile = { ...(S.d.profile || {}), ...p }; S.profileDirty = true; render(true); },
+  addQA: () => { const p = readProfileForm(); p.qa.push({}); S.d.profile = { ...(S.d.profile || {}), ...p }; S.profileDirty = true; render(true); },
   async profileFromResume() { if (S.profileDirty) { toast("先保存当前修改。", true); return; } await organize(); },
 };
 const CHANGE = {
@@ -541,7 +559,7 @@ async function pdfPageImages(file, maxPages) {
 async function ocrImages(images, name) {
   if (!S.sample) throw { code: "unavailable" };
   const lim = await S.sample.limits().catch(() => null);
-  if (!lim || !lim.images) throw { message: "当前环境不支持图片识别，请在对话里把这份简历发给 Claude。" };
+  if (!lim || !lim.images) throw { message: "当前 AI 不支持图片识别，请上传 TXT 或 Markdown 文本。" };
   const per = Math.max(1, Math.min(lim.images.maxCount || 1, 5));
   let text = "";
   for (let i = 0; i < images.length; i += per) {
@@ -553,9 +571,11 @@ async function ocrImages(images, name) {
   return text;
 }
 async function uploadResumes(files) {
+  let saved = 0;
   for (const f of files) {
     setBusy("upload", "读取 " + f.name + "…");
     try {
+      const original = await archiveFile(f);
       const lower = f.name.toLowerCase();
       let text = "", ocr = false;
       if (/\.(png|jpe?g|webp)$/.test(lower)) { text = await ocrImages([f], f.name); ocr = true; }
@@ -569,18 +589,19 @@ async function uploadResumes(files) {
         }
       }
       text = text.replace(/\n{3,}/g, "\n\n").trim();
-      if (text.length < 30) { toast(f.name + " 没识别出文字，请在对话里发给 Claude。", true); continue; }
-      await db.set("resumes/" + uid(), { title: f.name, text: text.slice(0, 120000), ocr, createdAt: new Date().toISOString() });
+      if (text.length < 30) { toast(f.name + " 没识别出文字，请检查文件或上传 TXT / Markdown。", true); continue; }
+      await db.set("resumes/" + uid(), { title: f.name, text: text.slice(0, 120000), ocr, ...(original ? { fileId: original.id } : {}), createdAt: new Date().toISOString() });
+      saved++;
       if (ocr) toast(f.name + " 已通过 OCR 识别。建议点「查看」核对一遍，标 [?] 的是没看清的字。");
     } catch (e) { toast(f.name + "：" + (e.message || errText(e)), true); }
   }
   setBusy("upload", false);
-  if (files.length) toast("简历已保存。点「AI 整理经历库」把它们合并成经历库。");
+  if (saved) toast(`已保存 ${saved} 份简历。点「AI 整理经历库」把它们合并成经历库。`);
 }
 
 /* ============ wiring ============ */
-document.addEventListener("click", e => { const t = e.target.closest("[data-act]"); if (!t) return; const f = ACT[t.dataset.act]; if (f) { if (t.tagName === "BUTTON" || t.tagName === "A") e.preventDefault(); f(t, e); } });
-document.addEventListener("change", e => { const t = e.target.closest("[data-change]"); if (t && CHANGE[t.dataset.change]) CHANGE[t.dataset.change](t, e); });
+document.addEventListener("click", e => { const t = e.target.closest("[data-act]"); if (!t) return; const f = ACT[t.dataset.act]; if (f) { if (t.tagName === "BUTTON" || t.tagName === "A") e.preventDefault(); Promise.resolve().then(() => f(t, e)).catch(error => toast(errText(error), true)); } });
+document.addEventListener("change", e => { const t = e.target.closest("[data-change]"); if (t && CHANGE[t.dataset.change]) Promise.resolve().then(() => CHANGE[t.dataset.change](t, e)).catch(error => toast(errText(error), true)); });
 document.addEventListener("input", e => {
   const t = e.target;
   if (t.closest("#pf")) { if (!S.profileDirty) { S.profileDirty = true; const h = $(".head .row"); if (h && !h.querySelector(".pill.warn")) h.insertAdjacentHTML("afterbegin", `<span class="pill warn">有未保存的修改</span>`); } return; }
@@ -610,7 +631,8 @@ S.engine = "bing"; try { S.engine = localStorage.getItem("jd_engine") || "bing";
 async function boot() {
   render();
   const c = window.claude;
-  if (!c || !c.use) { S.fatal = "请在 claude.ai 或 Claude App 中打开这个页面。"; render(); return; }
+  if (!c && (location.hostname.endsWith(".github.io") || new URLSearchParams(location.search).has("github"))) { githubLogin(); return; }
+  if (!c || !c.use) { await localBoot(); return; }
   const get = n => c.use(n).catch(() => null);
   const [dbx, sample, dl, user] = await Promise.all([get("db"), get("sample"), get("downloads"), get("user")]);
   Object.assign(S, { db: dbx, sample, dl, user });

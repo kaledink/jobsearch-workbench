@@ -4,7 +4,7 @@ function viewApp(a) {
   const t = S.appTab;
   return `<button class="back" data-act="closeApp">← 返回投递列表</button>
   <div class="head" style="margin-top:8px"><div class="grow"><div class="eyebrow">${esc(a.category || a.nature || "投递")}</div><h1>${esc(a.company || "未命名公司")}</h1>
-    <p class="sub">${esc(posSummary(a))}${a.city ? " · " + esc(a.city) : ""}${a.url ? ` · <a href="${esc(a.url)}" target="_blank" rel="noopener">打开招聘页</a>` : ""}</p></div>
+    <p class="sub">${esc(posSummary(a))}${a.city ? " · " + esc(a.city) : ""}${a.url ? ` · <a href="${safeURL(a.url)}" target="_blank" rel="noopener">打开招聘页</a>` : ""}</p></div>
     <div class="row"><select data-change="status" data-id="${a.id}" aria-label="投递状态" style="width:auto">${STATUSES.map(s => `<option ${s === (a.status || "待投递") ? "selected" : ""}>${s}</option>`).join("")}</select>
     <button class="btn" data-act="editApp" data-id="${a.id}">编辑信息</button></div></div>
   ${positionsPanel(a)}
@@ -112,6 +112,7 @@ function tailoredContent(a) {
 /* ---- fill ---- */
 function tabFill(a) {
   const k = "fill-" + a.id; const st = S.fill && S.fill.app === a.id ? S.fill : null;
+  if (S.local) return localFill(a);
   if (!S.hostOK) return `<div class="empty"><h3>需要在 Claude 桌面 App 里使用</h3><p>一键填表通过 App 自带的内置浏览器完成。请在 Claude 桌面 App 中打开这个页面；在手机或普通浏览器里这个功能不可用。<br>也可以直接在对话里对 Claude 说「帮我填 ${esc(a.company)} 的网申」。</p></div>`;
   return `<div class="stack">
   <section class="sheet"><h2>怎么用</h2><ol style="margin:0;padding-left:20px">
@@ -134,21 +135,17 @@ function tabFill(a) {
 function tabPrep(a) {
   const an = S.d.analyses.find(x => x.id === a.id); const k = "prep-" + a.id; const busy = S.busy[k];
   const queued = S.d.queue.find(q => q.applicationId === a.id && q.type === "deep" && q.status !== "done");
-  const controls = `<div class="row">${S.hostOK ? `<button class="btn primary" data-act="runDeep" data-id="${a.id}" ${busy ? "disabled" : ""}>${busy ? `<span class="spin"></span> 联网分析中…` : an ? "重新深度分析" : "深度分析"}</button>` : ""}
-    ${busy ? `<button class="btn" data-act="stopDeep">停止</button>` : ""}
-    <button class="btn" data-act="queueDeep" data-id="${a.id}" ${queued ? "disabled" : ""}>${queued ? "已交给 Claude，排队中" : "交给 Claude 联网分析"}</button></div>
-    <p class="note">${S.hostOK ? "「深度分析」在本页用内置浏览器检索（约 2–5 分钟）；「交给 Claude」会在每日任务或你在对话里说「处理求职队列」时完成，检索更全面。" : "当前不在 Claude 桌面 App 中，可交给 Claude 联网分析。"}</p>
-    <div class="log" id="log-${k}" ${(S.logs[k] || []).length ? "" : "hidden"}>${esc((S.logs[k] || []).join("\n"))}</div>`;
+  const controls = S.local ? `<div class="row"><button class="btn primary" data-act="runDeep" data-id="${a.id}" ${busy || S.aiStatus?.provider !== "codex" ? "disabled" : ""}>${busy ? "Codex 分析中…" : an ? "重新联网分析" : "用 Codex 联网分析"}</button></div><p class="note">使用公开网页和你保存的经历准备面试，请核对事实与信息来源。需要已登录且网络可用的 Codex。</p><div class="log" id="log-${k}" ${(S.logs[k] || []).length ? "" : "hidden"}>${esc((S.logs[k] || []).join("\n"))}</div>` : `<div class="row"><button class="btn" data-act="runDeep" data-id="${a.id}" ${busy ? "disabled" : ""}>深度分析</button></div>`;
   if (!an) return `<div class="stack"><section class="sheet"><h2>面试深度分析</h2><p class="note">结合你的经历、这家公司和这个岗位，生成：1 分钟和 3 分钟自我介绍、行业现状、业务方向、竞品对比、岗位解读、12–18 个预测问题及答题要点、反问清单，并附上信息来源。</p>${controls}</section></div>`;
   const s = an;
-  return `<div class="stack"><section class="sheet"><div class="row" style="justify-content:space-between"><div><div class="eyebrow">${s.by === "claude" ? "Claude 联网分析" : "本页内置浏览器分析"} · ${esc((s.at || "").slice(0, 16).replace("T", " "))}</div><h2 style="margin-top:4px">面试准备 · ${esc(a.company)}</h2></div></div>${controls}</section>
+  return `<div class="stack"><section class="sheet"><div class="row" style="justify-content:space-between"><div><div class="eyebrow">${s.by === "codex" ? "Codex 联网分析" : s.by === "claude" ? "Claude 联网分析" : "本页内置浏览器分析"} · ${esc((s.at || "").slice(0, 16).replace("T", " "))}</div><h2 style="margin-top:4px">面试准备 · ${esc(a.company)}</h2></div></div>${controls}</section>
   <div class="grid2"><section class="sheet"><h2>1 分钟自我介绍</h2>${md(s.intro1)}</section><section class="sheet"><h2>3 分钟自我介绍</h2>${md(s.intro3)}</section></div>
   ${s.introEn ? `<section class="sheet"><h2>英文自我介绍</h2>${md(s.introEn)}</section>` : ""}
   <div class="grid2"><section class="sheet"><h2>行业现状</h2>${md(s.industry)}</section><section class="sheet"><h2>业务方向与近期动态</h2>${md(s.business)}</section></div>
   <div class="grid2"><section class="sheet"><h2>竞品 / 同类机构对比</h2>${(s.competitors || []).length ? `<div class="list">${s.competitors.map(c => `<div class="li"><div class="grow"><b>${esc(c.name)}</b><div>${esc(c.compare)}</div></div></div>`).join("")}</div>` : `<p class="note">未查到。</p>`}</section><section class="sheet"><h2>岗位解读</h2>${md(s.role)}</section></div>
   <section class="sheet"><h2>预测面试问题 <span class="note mono">${(s.questions || []).length}</span></h2>${(s.questions || []).map(q => `<details class="q"><summary>${esc(q.q)} <span class="pill">${esc(q.type || "")}</span></summary><div class="note" style="margin-top:6px">考察：${esc(q.intent || "")}</div>${md(q.hint)}</details>`).join("")}</section>
   ${(s.ask || []).length ? `<section class="sheet"><h2>可以反问的问题</h2>${md(s.ask.map(x => "- " + x).join("\n"))}</section>` : ""}
-  ${(s.sources || []).length ? `<section class="sheet"><h2>信息来源</h2><ul style="margin:0;padding-left:18px">${s.sources.map(x => `<li><a href="${esc(x.url)}" target="_blank" rel="noopener">${esc(x.title || x.url)}</a></li>`).join("")}</ul></section>` : ""}
+  ${(s.sources || []).length ? `<section class="sheet"><h2>信息来源</h2><ul style="margin:0;padding-left:18px">${s.sources.map(x => `<li><a href="${safeURL(x.url)}" target="_blank" rel="noopener">${esc(x.title || x.url)}</a></li>`).join("")}</ul></section>` : ""}
   </div>`;
 }
 

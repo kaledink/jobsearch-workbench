@@ -1,0 +1,5 @@
+.workbench/
+__pycache__/
+*.pyc
+jobsearch-workbench/vendor/
+

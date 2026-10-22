@@ -9,16 +9,16 @@ function schedRender(kind) {
     render();
   });
 }
-function render() {
+function render(force = false) {
   if (S.composing) { S._pendingRender = true; return; }
   const counts = { apps: S.d.applications.filter(a => !DONE.has(a.status)).length, companies: S.d.companies.length, resumes: S.d.experiences.length, calendar: upcoming().length };
   $("#nav").innerHTML = VIEWS.map(([k, label]) => `<button data-act="go" data-v="${k}" aria-current="${S.view === k && !S.appId}"><span>${label}</span>${counts[k] ? `<span class="n">${counts[k]}</span>` : ""}</button>`).join("");
   $("#railfoot").innerHTML = `
     <div><span class="dot ${S.db ? "on" : "off"}"></span>${S.db ? "数据已同步" : "数据未连接"}</div>
-    <div><span class="dot ${S.hostOK ? "on" : "off"}"></span>${S.hostOK ? "内置浏览器可用" : "内置浏览器不可用"}</div>
+    ${S.local ? localRail() : `<div><span class="dot ${S.hostOK ? "on" : "off"}"></span>${S.hostOK ? "内置浏览器可用" : "内置浏览器不可用"}</div>`}
     <label class="f"><span>检索引擎</span><select id="engine" data-change="engine"><option value="bing" ${S.engine === "bing" ? "selected" : ""}>必应中国</option><option value="baidu" ${S.engine === "baidu" ? "selected" : ""}>百度</option></select></label>`;
   const m = $("#main");
-  if (S.view === "profile" && !S.appId && S.profileDirty && m.querySelector("#pf")) return;
+  if (!force && S.view === "profile" && !S.appId && S.profileDirty && m.querySelector("#pf")) return;
   if (S.fatal) { m.innerHTML = `<div class="empty"><h3>无法打开</h3><p>${esc(S.fatal)}</p></div>`; return; }
   if (!S.ready) { m.innerHTML = `<div class="empty"><h3>正在载入</h3><p>连接你的求职数据…</p></div>`; return; }
   const sy = window.scrollY;
@@ -53,7 +53,7 @@ V.dash = () => {
   const steps = [
     [S.d.resumes.length > 0, "上传简历", "把你的各版简历拖进来，AI 会整理成经历库", "resumes"],
     [hasProfile, "核对报名信息", "一键填表用的姓名、联系方式、教育经历等", "profile"],
-    [S.d.companies.length > 0, "导入公司库", "导入飞书表的 CSV/Excel，Claude 每天会补充", "companies"],
+    [S.d.companies.length > 0, "导入公司库", "导入 CSV/Excel，或手动添加单位", "companies"],
     [apps.length > 0, "新增第一个投递", "贴上招聘网址，自动分析匹配度", "apps"],
   ];
   const meta = S.d.meta || {};
@@ -70,8 +70,9 @@ V.dash = () => {
   <div class="grid2">
     <section class="sheet"><h2>接下来的日程</h2>${up.length ? `<div class="list">${up.slice(0, 6).map(evRow).join("")}</div>` : `<p class="note">还没有笔试或面试。投递状态改成「笔试」「一面」等阶段时，会弹窗让你确认时间并生成日历文件。</p>`}</section>
     <section class="sheet"><h2>截止临近</h2>${soon.length ? `<div class="list">${soon.slice(0, 7).map(c => `<div class="li"><div class="grow"><b>${esc(c.name)}</b><div class="note">${esc(c.batch || "")} ${esc(c.roles || "").slice(0, 40)}</div></div><span class="note mono">${esc(mmdd(c.openDate))} → ${esc(mmdd(c.deadline))}</span>${dlPill(c.deadline)}<button class="btn sm" data-act="applyCo" data-id="${c.id}">投递</button></div>`).join("")}</div>` : `<p class="note">10 天内没有要截止、且你还没投的公司。</p>`}</section>
-    <section class="sheet"><h2>Claude 每日更新</h2>${meta.lastDaily ? `<p class="note mono">最近一次：${esc(meta.lastDaily)}</p>${md(meta.dailySummary || "")}` : `<p class="note">每天早上 Claude 会按你的三个目标方向联网核实新开放的岗位，补充到公司库，并处理你交给它的分析任务。第一次运行后这里会显示结果。</p>`}</section>
-    <section class="sheet"><h2>交给 Claude 的任务</h2>${pend.length ? `<div class="list">${pend.map(q => `<div class="li"><span class="pill warn">排队中</span><div class="grow">${esc(q.label || q.type)}<div class="note mono">${esc((q.createdAt || "").slice(0, 16).replace("T", " "))}</div></div><button class="btn ghost sm" data-act="dropQ" data-id="${q.id}">撤销</button></div>`).join("")}</div><p class="note">每日任务会自动处理；想立刻处理，在对话里对 Claude 说「处理求职队列」。</p>` : `<p class="note">没有排队的任务。</p>`}</section>
+    <section class="sheet"><h2>岗位更新</h2>${meta.lastDaily ? `<p class="note mono">最近一次：${esc(meta.lastDaily)}</p>${md(meta.dailySummary || "")}` : `<p class="note">按你的目标方向检索公开招聘信息，结果需核对官方原文。不会在后台自动运行。</p>`}
+    ${S.local ? `<button class="btn" data-act="localJobs" ${S.busy.jobs || S.aiStatus?.provider !== "codex" ? "disabled" : ""}>${S.busy.jobs ? "检索中…" : "用 Codex 检索岗位"}</button>` : ""}</section>
+    <section class="sheet"><h2>待处理的分析</h2>${pend.length ? `<div class="list">${pend.map(q => `<div class="li"><div class="grow">${esc(q.label || q.type)}</div>${S.local ? `<button class="btn sm" data-act="runDeep" data-id="${esc(q.applicationId)}" ${S.busy["prep-" + q.applicationId] ? "disabled" : ""}>开始分析</button>` : ""}<button class="btn ghost sm" data-act="dropQ" data-id="${q.id}">撤销</button></div>`).join("")}</div>` : `<p class="note">没有排队的任务。</p>`}</section>
   </div>`;
 };
 
@@ -106,37 +107,37 @@ V.companies = () => {
   if (f.q) { const q = f.q.toLowerCase(); list = list.filter(c => [c.name, c.industry, c.roles, c.cities, c.nature, c.notes].join(" ").toLowerCase().includes(q)); }
   if (f.star) list = list.filter(c => c.starred);
   if (f.wait) list = list.filter(c => c.status === "notStarted" || c.status === "watch");
-  if (f.src === "claude") list = list.filter(c => c.source === "Claude");
+  if (f.src === "claude") list = list.filter(c => ["Claude", "Codex"].includes(c.source));
   else if (f.src === "feishu") list = list.filter(c => c.source === "飞书");
   else if (f.src === "post") list = list.filter(c => c.source === "推送" || c.source === "手动");
   const byDl = (a, b) => (daysLeft(a.deadline) ?? 9999) - (daysLeft(b.deadline) ?? 9999);
-  if (f.sort === "new") list.sort((a, b) => { const ca = a.source === "Claude", cb = b.source === "Claude"; if (ca !== cb) return ca ? -1 : 1; if (ca) { const d = addedKey(b).localeCompare(addedKey(a)); if (d) return d; } return byDl(a, b); });
+  if (f.sort === "new") list.sort((a, b) => { const ca = ["Claude", "Codex"].includes(a.source), cb = ["Claude", "Codex"].includes(b.source); if (ca !== cb) return ca ? -1 : 1; if (ca) { const d = addedKey(b).localeCompare(addedKey(a)); if (d) return d; } return byDl(a, b); });
   else if (f.sort === "fit") list.sort((a, b) => ((fitOf(b) || {}).score ?? -1) - ((fitOf(a) || {}).score ?? -1) || byDl(a, b));
   else list.sort(byDl);
   const starN = S.d.companies.filter(c => c.starred).length;
-  const latest = S.d.companies.filter(c => c.source === "Claude").map(addedKey).sort().pop() || "";
+  const latest = S.d.companies.filter(c => ["Claude", "Codex"].includes(c.source)).map(addedKey).sort().pop() || "";
   const applied = new Map(S.d.applications.map(a => [a.company, a]));
-  const src = c => c.source === "Claude" ? `<span class="pill acc">Claude 补充</span>` : c.source === "飞书" ? `<span class="pill">飞书</span>` : `<span class="pill">${esc(c.source || "手动")}</span>`;
-  return `<div class="head"><div><h1>公司库</h1><p class="sub">以你的飞书表为基准；Claude 每天按三个方向补充新开放的岗位，并标注核实日期。</p></div>
-    <div class="row">${S.hostOK ? `<button class="btn primary" data-act="feishu" ${S.busy.import ? "disabled" : ""}>${S.busy.import ? `<span class="spin"></span> ${esc(typeof S.busy.import === "string" ? S.busy.import : "同步中…")}` : "从飞书同步"}</button>` : `<span class="note">在 Claude 桌面 App 中可一键同步飞书</span>`}<button class="btn" data-act="importCo">导入 CSV / Excel</button><button class="btn" data-act="addPost">从招聘推送添加</button><button class="btn" data-act="addCo">手动添加</button></div></div>
+  const src = c => ["Claude", "Codex"].includes(c.source) ? `<span class="pill acc">AI 补充</span>` : c.source === "飞书" ? `<span class="pill">飞书</span>` : `<span class="pill">${esc(c.source || "手动")}</span>`;
+  return `<div class="head"><div><h1>公司库</h1><p class="sub">导入公司表、手动添加，或从招聘推送提取岗位。</p></div>
+    <div class="row">${S.hostOK ? `<button class="btn primary" data-act="feishu" ${S.busy.import ? "disabled" : ""}>${S.busy.import ? `<span class="spin"></span> ${esc(typeof S.busy.import === "string" ? S.busy.import : "同步中…")}` : "从飞书同步"}</button>` : `<span class="note">飞书表可导出后导入</span>`}<button class="btn" data-act="importCo">导入 CSV / Excel</button><button class="btn" data-act="addPost">从招聘推送添加</button><button class="btn" data-act="addCo">手动添加</button></div></div>
   <div class="row" style="margin-bottom:12px"><input type="search" placeholder="搜索单位、岗位、城市、备注" value="${esc(f.q)}" data-input="cfq" style="max-width:280px">
     <div class="row">${["", ...DIRS].map(d => `<button class="chip" data-act="cfDir" data-d="${esc(d)}" aria-pressed="${f.dir === d}">${d || "全部方向"}</button>`).join("")}</div>
     <button class="chip" data-act="cfStar" aria-pressed="${f.star}">★ 只看标星 <span class="mono">${starN}</span></button>
     <button class="chip" data-act="cfWait" aria-pressed="${f.wait}">未开放·关注中 <span class="mono">${S.d.companies.filter(c => c.status === "notStarted" || c.status === "watch").length}</span></button>
-    <button class="chip" data-act="cfSrc" data-s="claude" aria-pressed="${f.src === "claude"}">Claude 新增 <span class="mono">${S.d.companies.filter(c => c.source === "Claude").length}</span></button>
+    <button class="chip" data-act="cfSrc" data-s="claude" aria-pressed="${f.src === "claude"}">AI 新增 <span class="mono">${S.d.companies.filter(c => ["Claude", "Codex"].includes(c.source)).length}</span></button>
     <button class="chip" data-act="cfSrc" data-s="feishu" aria-pressed="${f.src === "feishu"}">飞书 <span class="mono">${S.d.companies.filter(c => c.source === "飞书").length}</span></button>
     <button class="chip" data-act="cfSrc" data-s="post" aria-pressed="${f.src === "post"}">我添加 <span class="mono">${S.d.companies.filter(c => c.source === "推送" || c.source === "手动").length}</span></button>
     <label class="row note"><input type="checkbox" data-change="cfOpen" ${f.open ? "checked" : ""}> 只看未截止</label>
-    <label class="row note">排序 <select data-change="cfSort" style="width:auto"><option value="new" ${f.sort === "new" ? "selected" : ""}>Claude 新增优先</option><option value="dl" ${f.sort === "dl" ? "selected" : ""}>截止最近优先</option><option value="fit" ${f.sort === "fit" ? "selected" : ""}>匹配度最高</option></select></label></div>
+    <label class="row note">排序 <select data-change="cfSort" style="width:auto"><option value="new" ${f.sort === "new" ? "selected" : ""}>AI 新增优先</option><option value="dl" ${f.sort === "dl" ? "selected" : ""}>截止最近优先</option><option value="fit" ${f.sort === "fit" ? "selected" : ""}>匹配度最高</option></select></label></div>
   ${list.length ? `<div class="tbl-wrap"><table><thead><tr><th>公司</th><th>方向 / 性质</th><th>批次 · 岗位</th><th>匹配度</th><th>城市</th><th>报名时间<div class="t2" style="font-weight:400">开始 → 截止</div></th><th>来源</th><th></th></tr></thead><tbody>
   ${list.map(c => { const a = applied.get(c.name); return `<tr>
     <td><div class="row" style="flex-wrap:nowrap;align-items:flex-start;gap:8px"><button class="star" data-act="star" data-id="${c.id}" aria-pressed="${!!c.starred}" aria-label="${c.starred ? "取消标星" : "标星"}" title="${c.starred ? "取消标星" : "觉得合适就标星"}">${c.starred ? "★" : "☆"}</button>
-      <div><div class="t1">${c.url ? `<a href="${esc(c.url)}" target="_blank" rel="noopener">${esc(c.name)}</a>` : esc(c.name)}${c.source === "Claude" && latest && addedKey(c) === latest ? ` <span class="pill acc">新</span>` : ""}</div><div class="t2">${esc(c.industry || "")}</div>${c.group ? `<span class="pill acc" style="margin-top:2px">${esc(c.group)}</span>` : ""}${c.myNote || c.myLink ? `<div class="row" style="gap:6px;margin-top:2px">${c.myNote ? `<span class="pill warn">${esc(c.myNote)}</span>` : ""}${c.myLink ? `<a class="t2" href="${esc(c.myLink)}" target="_blank" rel="noopener">我的链接</a>` : ""}</div>` : ""}${c.notes && String(c.notes).trim() !== "无" ? `<div class="t2 clamp" title="${esc(c.notes)}" data-act="toggleClamp">${esc(c.notes)}</div>` : ""}</div></div></td>
+      <div><div class="t1">${c.url ? `<a href="${safeURL(c.url)}" target="_blank" rel="noopener">${esc(c.name)}</a>` : esc(c.name)}${["Claude", "Codex"].includes(c.source) && latest && addedKey(c) === latest ? ` <span class="pill acc">新</span>` : ""}</div><div class="t2">${esc(c.industry || "")}</div>${c.group ? `<span class="pill acc" style="margin-top:2px">${esc(c.group)}</span>` : ""}${c.myNote || c.myLink ? `<div class="row" style="gap:6px;margin-top:2px">${c.myNote ? `<span class="pill warn">${esc(c.myNote)}</span>` : ""}${c.myLink ? `<a class="t2" href="${safeURL(c.myLink)}" target="_blank" rel="noopener">我的链接</a>` : ""}</div>` : ""}${c.notes && String(c.notes).trim() !== "无" ? `<div class="t2 clamp" title="${esc(c.notes)}" data-act="toggleClamp">${esc(c.notes)}</div>` : ""}</div></div></td>
     <td><div>${esc(c.category || "未分类")}</div><div class="t2">${esc(c.nature || "")}</div></td>
     <td><div>${esc(c.batch || "")}${c.edu ? ` <span class="t2">${esc(c.edu)}</span>` : ""}</div><div class="t2">${esc(String(c.roles || "").slice(0, 60))}</div></td>
     <td style="max-width:220px">${fitOf(c) ? `<span class="score ${scoreCls(fitOf(c).score)}">${fitOf(c).score}</span><div class="t2">${esc(fitOf(c).reason || "")}</div>` : `<span class="note">—</span>`}</td>
     <td class="t2" style="max-width:140px">${esc(String(c.cities || "").slice(0, 40))}</td><td>${periodCell(c)}</td>
-    <td>${src(c)}${c.feishuUrl ? ` <a class="t2" href="${esc(c.feishuUrl)}" target="_blank" rel="noopener">飞书原表</a>` : ""}${c.noExam ? `<div><span class="pill ok">免笔试</span></div>` : ""}${c.verifiedAt ? `<div class="t2 mono">核实 ${esc(c.verifiedAt.slice(5, 10))}</div>` : ""}</td>
+    <td>${src(c)}${c.feishuUrl ? ` <a class="t2" href="${safeURL(c.feishuUrl)}" target="_blank" rel="noopener">飞书原表</a>` : ""}${c.noExam ? `<div><span class="pill ok">免笔试</span></div>` : ""}${c.verifiedAt ? `<div class="t2 mono">核实 ${esc(c.verifiedAt.slice(5, 10))}</div>` : ""}</td>
     <td><div class="row">${a ? `<button class="btn sm" data-act="openApp" data-id="${a.id}">${esc(a.status || "待投递")}</button>` : `<button class="btn sm primary" data-act="applyCo" data-id="${c.id}">投递</button>`}<button class="btn ghost sm" data-act="editCo" data-id="${c.id}">编辑</button></div></td></tr>`; }).join("")}
   </tbody></table></div><p class="note">共 ${list.length} 家（库内 ${S.d.companies.length} 家）</p>` : `<div class="empty"><h3>${S.d.companies.length ? "没有符合筛选的公司" : "公司库是空的"}</h3><p>在飞书里把表格导出为 Excel 或 CSV，点「导入 CSV / Excel」；同名公司同批次会自动合并更新。</p></div>`}`;
 };
@@ -147,7 +148,7 @@ V.resumes = () => {
   const groups = {};
   for (const e of ex) (groups[e.type] = groups[e.type] || []).push(e);
   return `<div class="head"><div><h1>简历与经历</h1><p class="sub">原始简历留档；经历库是去重后的事实底稿，定制简历只改表述、不改事实。</p></div>
-    <div class="row"><button class="btn" data-act="addExp">添加经历</button><button class="btn primary" data-act="organize" ${S.d.resumes.length ? "" : "disabled"}>${S.busy.organize ? `<span class="spin"></span> 整理中…` : "AI 整理经历库"}</button></div></div>
+    <div class="row"><button class="btn" data-act="addExp">添加经历</button><button class="btn primary" data-act="organize" ${S.d.resumes.length && !S.busy.organize ? "" : "disabled"}>${S.busy.organize ? `<span class="spin"></span> 整理中…` : "AI 整理经历库"}</button></div></div>
   <div class="grid2" style="grid-template-columns:minmax(0,1fr) minmax(0,2fr)">
     <section class="stack">
       ${profileCard()}
@@ -155,7 +156,7 @@ V.resumes = () => {
       <input type="file" id="resume-file" accept=".pdf,.docx,.txt,.md,.png,.jpg,.jpeg,.webp" multiple hidden data-change="resumeFiles">
       ${S.busy.upload ? `<p class="note"><span class="spin"></span> ${esc(S.busy.upload)}</p>` : ""}
       <div class="sheet"><h2>原始简历 <span class="note mono">${S.d.resumes.length}</span></h2>
-      ${S.d.resumes.length ? `<div class="list">${S.d.resumes.map(r => `<div class="li"><div class="grow"><b>${esc(r.title)}</b><div class="note mono">${esc((r.createdAt || "").slice(0, 10))} · ${(r.text || "").length} 字${r.ocr ? " · OCR" : ""}</div></div><button class="btn ghost sm" data-act="viewResume" data-id="${r.id}">查看</button><button class="btn ghost sm danger" data-act="delResume" data-id="${r.id}">删除</button></div>`).join("")}</div>` : `<p class="note">还没有上传。你也可以直接在对话里把简历发给 Claude，让它整理进来。</p>`}</div>
+      ${S.d.resumes.length ? `<div class="list">${S.d.resumes.map(r => `<div class="li"><div class="grow"><b>${esc(r.title)}</b><div class="note mono">${esc((r.createdAt || "").slice(0, 10))} · ${(r.text || "").length} 字${r.ocr ? " · OCR" : ""}</div></div><button class="btn ghost sm" data-act="viewResume" data-id="${r.id}">查看</button><button class="btn ghost sm danger" data-act="delResume" data-id="${r.id}">删除</button></div>`).join("")}</div>` : `<p class="note">还没有上传。上传 TXT、Markdown 或文档后，点击「AI 整理经历库」。</p>`}</div>
     </section>
     <section class="sheet"><h2>经历库 <span class="note mono">${ex.length}</span></h2>
     ${ex.length ? Object.keys(EXP_TYPES).filter(t => groups[t]).map(t => `<div style="margin-top:10px"><div class="eyebrow">${EXP_TYPES[t]}</div><div class="list">${groups[t].map(e => `

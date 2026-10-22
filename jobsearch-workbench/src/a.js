@@ -31,6 +31,7 @@ try { const v = localStorage.getItem("jd_view"); if (v && VIEWS.some(x => x[0] =
 /* ============ helpers ============ */
 const $ = (s, r = document) => r.querySelector(s);
 const esc = s => String(s ?? "").replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+const safeURL = s => esc(/^https?:\/\//i.test(String(s || "")) ? s : "#");
 const uid = () => Date.now().toString(36) + Math.random().toString(36).slice(2, 8);
 const sleep = ms => new Promise(r => setTimeout(r, ms));
 const today = () => { const d = new Date(); return ymd(d); };
@@ -90,10 +91,14 @@ function md(text) {
 let toastT;
 function toast(msg, bad) { const t = $("#toast"); t.textContent = msg; t.className = "toast" + (bad ? " bad" : ""); t.hidden = false; clearTimeout(toastT); toastT = setTimeout(() => t.hidden = true, bad ? 6000 : 3200); }
 function loadScript(src) {
-  return new Promise((res, rej) => {
-    if (document.querySelector(`script[src="${src}"]`)) { res(); return; }
-    const s = document.createElement("script"); s.src = src; s.onload = res; s.onerror = () => rej(new Error("加载组件失败：" + src.split("/").pop())); document.head.appendChild(s);
+  loadScript.pending ||= new Map();
+  if (loadScript.pending.has(src)) return loadScript.pending.get(src);
+  const task = new Promise((res, rej) => {
+    const s = document.createElement("script"); s.src = src; s.onload = res;
+    s.onerror = () => { s.remove(); loadScript.pending.delete(src); rej(new Error("加载组件失败：" + src.split("/").pop() + "，请确认已运行 prepare_assets.py 后重试。")); };
+    document.head.appendChild(s);
   });
+  loadScript.pending.set(src, task); return task;
 }
 function errText(e) {
   const c = e && e.code;
@@ -144,11 +149,12 @@ function subscribe() {
 
 /* ============ AI ============ */
 async function ai(prompt, opts = {}) {
-  if (!S.sample) throw { code: "unavailable", message: "当前环境无法调用 Claude" };
+  if (!S.sample) throw { message: "AI 尚未连接，请在「数据与 AI 设置」中测试连接。" };
   const o = { modelTier: opts.tier || "default" };
   if (opts.tools) o.tools = opts.tools; else o.cache = false;
   if (opts.signal) o.signal = opts.signal;
   if (opts.onText) o.onText = opts.onText;
+  if (opts.images) o.images = opts.images;
   return S.sample.json(prompt, o);
 }
 function profileBrief(withContact) {
