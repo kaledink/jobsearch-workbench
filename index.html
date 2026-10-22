@@ -1,0 +1,1894 @@
+<!doctype html>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Kaledin 求职工作台</title>
+<meta name="robots" content="noindex,nofollow">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Serif+SC:wght@600;700&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<style>
+/* Layout: dossier desk — fixed left index rail, working sheet on the right; detail opens as a full sheet over the list */
+:root{
+  --bg:#eef0ec; --sheet:#fbfcfa; --sunk:#e4e8e3; --ink:#1b2220; --muted:#5d6a65; --line:#d3d9d3;
+  --accent:#1e5d68; --accent-ink:#ffffff; --accent-soft:#d6e7e8;
+  --ok:#2c7a4b; --ok-soft:#dcefe2; --warn:#a96a12; --warn-soft:#f6e8cf; --bad:#b03a35; --bad-soft:#f5dcda;
+  --stamp:#9b3b2e;
+  --f-display:"Noto Serif SC","Songti SC","STSong",serif;
+  --f-body:-apple-system,BlinkMacSystemFont,"PingFang SC","Hiragino Sans GB","Noto Sans SC","Microsoft YaHei",sans-serif;
+  --f-mono:"IBM Plex Mono",ui-monospace,"SF Mono",Menlo,monospace;
+  --r:8px; --shadow:0 1px 2px rgba(20,30,28,.06),0 8px 24px rgba(20,30,28,.08);
+}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
+  --bg:#121615; --sheet:#191e1d; --sunk:#222827; --ink:#e3e9e6; --muted:#97a39e; --line:#2d3533;
+  --accent:#6db2bd; --accent-ink:#0e1a1c; --accent-soft:#1f3639;
+  --ok:#6cc08d; --ok-soft:#1d3326; --warn:#e0a54c; --warn-soft:#382b17; --bad:#ec817b; --bad-soft:#3d2120;
+  --stamp:#e08a7c; --shadow:0 1px 2px rgba(0,0,0,.3),0 8px 24px rgba(0,0,0,.35); color-scheme:dark}}
+:root[data-theme="dark"]{
+  --bg:#121615; --sheet:#191e1d; --sunk:#222827; --ink:#e3e9e6; --muted:#97a39e; --line:#2d3533;
+  --accent:#6db2bd; --accent-ink:#0e1a1c; --accent-soft:#1f3639;
+  --ok:#6cc08d; --ok-soft:#1d3326; --warn:#e0a54c; --warn-soft:#382b17; --bad:#ec817b; --bad-soft:#3d2120;
+  --stamp:#e08a7c; --shadow:0 1px 2px rgba(0,0,0,.3),0 8px 24px rgba(0,0,0,.35); color-scheme:dark}
+*{box-sizing:border-box}
+body{background:var(--bg);color:var(--ink);font-family:var(--f-body);font-size:14px;line-height:1.6}
+button,input,select,textarea{font:inherit;color:inherit}
+a{color:var(--accent)}
+.app{display:grid;grid-template-columns:212px minmax(0,1fr);min-height:100vh}
+.rail{border-right:1px solid var(--line);padding:22px 14px;display:flex;flex-direction:column;gap:18px;position:sticky;top:env(safe-area-inset-top,0px);height:100vh;background:var(--bg)}
+.brand{font-family:var(--f-display);font-size:19px;font-weight:700;letter-spacing:.02em;line-height:1.3}
+.brand small{display:block;font-family:var(--f-mono);font-size:11px;font-weight:400;color:var(--muted);letter-spacing:.04em}
+.nav{display:flex;flex-direction:column;gap:2px}
+.nav button{all:unset;cursor:pointer;display:flex;justify-content:space-between;align-items:center;padding:8px 10px;border-radius:6px;color:var(--muted)}
+.nav button:hover{background:var(--sunk);color:var(--ink)}
+.nav button[aria-current="true"]{background:var(--sheet);color:var(--ink);font-weight:600;box-shadow:inset 3px 0 0 var(--accent)}
+.nav button:focus-visible{outline:2px solid var(--accent);outline-offset:1px}
+.nav .n{font-family:var(--f-mono);font-size:12px;color:var(--muted)}
+.rail-foot{margin-top:auto;font-size:12px;color:var(--muted);display:flex;flex-direction:column;gap:6px}
+.dot{display:inline-block;width:7px;height:7px;border-radius:50%;margin-right:6px;background:var(--muted);vertical-align:1px}
+.dot.on{background:var(--ok)} .dot.off{background:var(--warn)}
+main{min-width:0;padding-inline:28px;padding-block:24px 64px}
+.head{display:flex;flex-wrap:wrap;gap:12px;align-items:flex-end;justify-content:space-between;margin-bottom:18px}
+h1{font-family:var(--f-display);font-size:26px;font-weight:700;margin:0;text-wrap:balance;line-height:1.25}
+h2{font-family:var(--f-display);font-size:18px;font-weight:600;margin:0 0 10px;text-wrap:balance}
+h3{font-size:14px;margin:0 0 6px;font-weight:600}
+.sub{color:var(--muted);font-size:13px;margin:4px 0 0}
+.eyebrow{font-size:11px;letter-spacing:.08em;color:var(--muted);text-transform:uppercase;font-family:var(--f-mono)}
+.btn{cursor:pointer;border:1px solid var(--line);background:var(--sheet);border-radius:6px;padding:6px 12px;display:inline-flex;align-items:center;gap:6px;white-space:nowrap}
+.btn:hover{border-color:var(--accent)}
+.btn:focus-visible,.chip:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-visible{outline:2px solid var(--accent);outline-offset:1px}
+.btn.primary{background:var(--accent);color:var(--accent-ink);border-color:var(--accent);font-weight:600}
+.btn.ghost{background:transparent;border-color:transparent;color:var(--muted)}
+.btn.ghost:hover{color:var(--ink);background:var(--sunk)}
+.btn.danger{color:var(--bad)}
+.btn.sm{padding:3px 9px;font-size:12.5px}
+.btn[disabled]{opacity:.5;cursor:not-allowed}
+.row{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
+.grow{flex:1;min-width:0}
+.sheet{background:var(--sheet);border:1px solid var(--line);border-radius:var(--r);padding:18px}
+.stack{display:flex;flex-direction:column;gap:16px}
+.grid2{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:16px}
+.grid3{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:16px}
+.kpis{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:1px;background:var(--line);border:1px solid var(--line);border-radius:var(--r);overflow:hidden;margin-bottom:16px}
+.kpi{background:var(--sheet);padding:14px 16px}
+.kpi b{display:block;font-family:var(--f-mono);font-size:26px;font-weight:500;font-variant-numeric:tabular-nums;line-height:1.2}
+.kpi span{font-size:12.5px;color:var(--muted)}
+.tbl-wrap{overflow-x:auto;border:1px solid var(--line);border-radius:var(--r);background:var(--sheet)}
+table{border-collapse:collapse;width:100%;min-width:760px}
+th,td{text-align:left;padding:9px 12px;border-bottom:1px solid var(--line);vertical-align:top}
+th{font-size:12px;color:var(--muted);font-weight:500;background:var(--sunk);position:sticky;top:0}
+tr:last-child td{border-bottom:0}
+tbody tr:hover{background:color-mix(in srgb,var(--accent-soft) 35%,transparent)}
+td .t1{font-weight:600}
+td .t2{font-size:12.5px;color:var(--muted)}
+.mono{font-family:var(--f-mono);font-variant-numeric:tabular-nums}
+.pill{display:inline-block;font-size:12px;padding:1px 8px;border-radius:999px;background:var(--sunk);color:var(--muted);white-space:nowrap}
+.pill.ok{background:var(--ok-soft);color:var(--ok)} .pill.warn{background:var(--warn-soft);color:var(--warn)}
+.pill.bad{background:var(--bad-soft);color:var(--bad)} .pill.acc{background:var(--accent-soft);color:var(--accent)}
+.star{all:unset;cursor:pointer;font-size:17px;line-height:1.2;color:var(--muted)}
+.star[aria-pressed="true"]{color:var(--warn)}
+.star:hover{color:var(--warn)}
+.star:focus-visible{outline:2px solid var(--accent);outline-offset:2px;border-radius:3px}
+.clamp{display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden;max-width:360px;cursor:pointer;margin-top:2px}
+.clamp.open{-webkit-line-clamp:unset;display:block}
+.chip{cursor:pointer;border:1px solid var(--line);background:var(--sheet);border-radius:999px;padding:3px 11px;font-size:12.5px}
+.chip[aria-pressed="true"]{background:var(--accent);border-color:var(--accent);color:var(--accent-ink)}
+.score{font-family:var(--f-mono);font-weight:500;font-variant-numeric:tabular-nums}
+.score.hi{color:var(--ok)} .score.mid{color:var(--warn)} .score.lo{color:var(--bad)}
+input[type=text],input[type=url],input[type=date],input[type=datetime-local],input[type=number],input[type=search],select,textarea{
+  width:100%;border:1px solid var(--line);background:var(--sheet);border-radius:6px;padding:6px 9px;min-width:0}
+textarea{resize:vertical;min-height:80px;line-height:1.55}
+label.f{display:flex;flex-direction:column;gap:4px;font-size:12.5px;color:var(--muted);min-width:0}
+label.f > span{font-weight:500}
+.fields{display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:12px}
+.empty{border:1px dashed var(--line);border-radius:var(--r);padding:28px 20px;text-align:center;color:var(--muted);background:var(--sheet)}
+.empty h3{color:var(--ink);font-family:var(--f-display);font-size:16px}
+.note{font-size:12.5px;color:var(--muted)}
+.callout{border-left:3px solid var(--warn);background:var(--warn-soft);padding:9px 12px;border-radius:0 6px 6px 0;font-size:13px}
+.callout.info{border-color:var(--accent);background:var(--accent-soft)}
+.list{display:flex;flex-direction:column}
+.li{display:flex;gap:12px;align-items:flex-start;padding:10px 0;border-bottom:1px solid var(--line)}
+.li:last-child{border-bottom:0}
+.date-tag{font-family:var(--f-mono);font-size:12px;min-width:78px;color:var(--muted);font-variant-numeric:tabular-nums}
+.date-tag b{display:block;font-size:15px;color:var(--ink);font-weight:500}
+.tabs{display:flex;gap:2px;border-bottom:1px solid var(--line);margin-bottom:16px;overflow-x:auto}
+.tabs button{all:unset;cursor:pointer;padding:8px 14px;color:var(--muted);border-bottom:2px solid transparent;white-space:nowrap}
+.tabs button[aria-selected="true"]{color:var(--ink);border-color:var(--accent);font-weight:600}
+.tabs button:focus-visible{outline:2px solid var(--accent)}
+.back{all:unset;cursor:pointer;color:var(--muted);font-size:13px}
+.back:hover{color:var(--ink)}
+.gauge{width:108px;height:108px;flex:none}
+.bar{height:6px;border-radius:3px;background:var(--sunk);overflow:hidden}
+.bar i{display:block;height:100%;background:var(--accent)}
+.md p{margin:0 0 8px} .md ul{margin:0 0 8px;padding-left:20px} .md li{margin:2px 0}
+.diff ins{background:var(--ok-soft);color:var(--ok);text-decoration:none;border-radius:2px}
+.diff del{background:var(--bad-soft);color:var(--bad);border-radius:2px}
+.bullet{display:grid;grid-template-columns:auto minmax(0,1fr);gap:10px;padding:10px 0;border-bottom:1px dashed var(--line)}
+.bullet:last-child{border-bottom:0}
+.why{font-size:12.5px;color:var(--muted);margin-top:4px}
+.why::before{content:"改动原因 · ";color:var(--accent)}
+.log{font-family:var(--f-mono);font-size:12px;color:var(--muted);background:var(--sunk);border-radius:6px;padding:8px 10px;max-height:180px;overflow:auto;white-space:pre-wrap}
+.stamp{display:inline-block;border:1.5px solid var(--stamp);color:var(--stamp);font-family:var(--f-display);font-size:12px;padding:0 6px;border-radius:3px;transform:rotate(-2deg)}
+.drop{border:1.5px dashed var(--accent);border-radius:var(--r);padding:22px;text-align:center;background:var(--accent-soft);cursor:pointer}
+.drop.over{background:var(--sheet)}
+.q{padding:10px 0;border-bottom:1px solid var(--line)} .q:last-child{border-bottom:0}
+.q summary{cursor:pointer;font-weight:600}
+.modal-bg{position:fixed;inset:0;background:rgba(10,16,15,.45);display:flex;align-items:flex-start;justify-content:center;padding:6vh 16px 16px;z-index:50;overflow:auto}
+.modal{background:var(--sheet);border:1px solid var(--line);border-radius:10px;box-shadow:var(--shadow);width:min(640px,100%);padding:20px;display:flex;flex-direction:column;gap:14px}
+.modal.wide{width:min(860px,100%)}
+.toast{position:fixed;right:16px;bottom:calc(16px + env(safe-area-inset-bottom,0px));background:var(--ink);color:var(--bg);padding:9px 14px;border-radius:6px;z-index:60;max-width:min(420px,calc(100vw - 32px));box-shadow:var(--shadow)}
+.toast.bad{background:var(--bad);color:#fff}
+.spin{display:inline-block;width:12px;height:12px;border:2px solid currentColor;border-right-color:transparent;border-radius:50%;animation:sp .8s linear infinite}
+@keyframes sp{to{transform:rotate(360deg)}}
+@media (prefers-reduced-motion:reduce){.spin{animation:none}}
+@media (max-width:860px){
+  .app{grid-template-columns:minmax(0,1fr)}
+  .rail{position:sticky;top:env(safe-area-inset-top,0px);height:auto;flex-direction:row;align-items:center;padding:10px 16px;gap:12px;z-index:20;border-right:0;border-bottom:1px solid var(--line);overflow-x:auto}
+  .brand small,.rail-foot{display:none}
+  .brand{font-size:15px;white-space:nowrap}
+  .nav{flex-direction:row}
+  .nav button{white-space:nowrap;gap:6px}
+  main{padding-inline:16px}
+  .grid2,.grid3{grid-template-columns:minmax(0,1fr)}
+  .kpis{grid-template-columns:repeat(2,minmax(0,1fr))}
+}
+</style>
+
+<div class="app">
+  <aside class="rail">
+    <div class="brand">求职工作台<small>KALEDIN · 2027 CYCLE</small></div>
+    <nav class="nav" id="nav"></nav>
+    <div class="rail-foot" id="railfoot"></div>
+  </aside>
+  <main id="main">
+    <div class="empty"><h3>正在载入</h3><p>连接你的求职数据…</p></div>
+  </main>
+</div>
+<div id="modal"></div>
+<div id="toast" class="toast" hidden></div>
+<script>
+"use strict";
+/* ============ constants ============ */
+const DIRS = ["政府机关/事业单位", "高校教职、辅导员、博士后", "国企央企"];
+const STATUSES = ["待投递", "已投递", "测评", "笔试", "一面", "二面", "三面", "终面", "HR面", "Offer", "已拒绝", "已放弃"];
+const EVENT_STAGES = new Set(["测评", "笔试", "一面", "二面", "三面", "终面", "HR面"]);
+const DONE = new Set(["Offer", "已拒绝", "已放弃"]);
+const EXP_TYPES = { intern: "实习", work: "工作", research: "科研", project: "项目", leadership: "学生工作/社团", publication: "论文/成果", award: "获奖", other: "其他" };
+const HOST = "host:claude_browser";
+const LIBS = {
+  pdf: "https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js",
+  pdfw: "https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js",
+  mammoth: "https://cdnjs.cloudflare.com/ajax/libs/mammoth/1.6.0/mammoth.browser.min.js",
+  xlsx: "https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js",
+  docx: "https://cdn.jsdelivr.net/npm/docx@8.5.0/build/index.umd.js",
+};
+const VIEWS = [
+  ["dash", "总览"], ["apps", "投递"], ["companies", "公司库"], ["resumes", "简历与经历"], ["profile", "报名信息"], ["calendar", "日程"],
+];
+const COLLS = ["resumes", "experiences", "companies", "applications", "tailored", "analyses", "queue"];
+
+/* ============ state ============ */
+const S = {
+  db: null, sample: null, mcp: null, dl: null, user: null, hostOK: false, ready: false, fatal: "",
+  d: { profile: null, meta: null, resumes: [], experiences: [], companies: [], applications: [], tailored: [], analyses: [], queue: [] },
+  view: "dash", appId: null, appTab: "match",
+  cf: { q: "", dir: "", open: true, star: false, sort: "new", src: "", wait: false }, af: { q: "", status: "" },
+  busy: {}, logs: {}, profileDirty: false, tailorSel: {},
+};
+try { const v = localStorage.getItem("jd_view"); if (v && VIEWS.some(x => x[0] === v)) S.view = v; } catch (e) {}
+
+/* ============ helpers ============ */
+const $ = (s, r = document) => r.querySelector(s);
+const esc = s => String(s ?? "").replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+const safeURL = s => esc(/^https?:\/\//i.test(String(s || "")) ? s : "#");
+const uid = () => Date.now().toString(36) + Math.random().toString(36).slice(2, 8);
+const sleep = ms => new Promise(r => setTimeout(r, ms));
+const today = () => { const d = new Date(); return ymd(d); };
+function ymd(d) { const p = n => String(n).padStart(2, "0"); return d.getFullYear() + "-" + p(d.getMonth() + 1) + "-" + p(d.getDate()); }
+function hm(d) { const p = n => String(n).padStart(2, "0"); return p(d.getHours()) + ":" + p(d.getMinutes()); }
+function hashId(str) { let h1 = 0x811c9dc5, h2 = 0; for (const ch of String(str)) { const c = ch.codePointAt(0); h1 = Math.imul(h1 ^ c, 16777619) >>> 0; h2 = (h2 * 31 + c) >>> 0; } return "c" + h1.toString(36) + h2.toString(36); }
+function daysLeft(dstr) { if (!dstr || !/^\d{4}-\d{2}-\d{2}/.test(dstr)) return null; const t = new Date(dstr.slice(0, 10) + "T23:59:59"); return Math.ceil((t - Date.now()) / 864e5); }
+function scoreCls(s) { return s >= 75 ? "hi" : s >= 55 ? "mid" : "lo"; }
+function statusPill(s) {
+  const cls = s === "Offer" ? "ok" : (s === "已拒绝" || s === "已放弃") ? "bad" : EVENT_STAGES.has(s) ? "warn" : s === "已投递" ? "acc" : "";
+  return `<span class="pill ${cls}">${esc(s || "待投递")}</span>`;
+}
+function dlPill(d) {
+  const n = daysLeft(d);
+  if (n === null) return d ? `<span class="pill">${esc(d)}</span>` : `<span class="note">—</span>`;
+  if (n < 0) return `<span class="pill bad">已截止</span>`;
+  if (n <= 3) return `<span class="pill bad mono">${n} 天</span>`;
+  if (n <= 10) return `<span class="pill warn mono">${n} 天</span>`;
+  return `<span class="pill mono">${esc(d.slice(5, 10))}</span>`;
+}
+function mmdd(s) {
+  if (!s) return "—";
+  return /^\d{4}-\d{2}-\d{2}/.test(s) ? s.slice(5, 10).replace("-", "/") : String(s).slice(0, 12);
+}
+function periodCell(c) {
+  const open = c.openDate, end = c.deadline;
+  const toOpen = daysLeft(open);
+  let status;
+  if (c.status === "notStarted" && !end) return `<span class="pill">招聘未开始</span><div class="t2">每日关注中</div>`;
+  if (c.status === "watch" && !end) return `<span class="pill warn">待确认是否开放</span><div class="t2">每日关注中</div>`;
+  if (c.status === "open" && !end && !open) return `<span class="pill ok">已在招</span><div class="t2">截止待确认</div>`;
+  if (toOpen !== null && toOpen > 0) status = `<span class="pill acc mono">${toOpen} 天后开放</span>`;
+  else {
+    const n = daysLeft(end);
+    status = n === null ? (end ? "" : `<span class="note">截止未知</span>`) : n < 0 ? `<span class="pill bad">已截止</span>` : n <= 3 ? `<span class="pill bad mono">剩 ${n} 天</span>` : n <= 10 ? `<span class="pill warn mono">剩 ${n} 天</span>` : `<span class="pill ok">报名中</span>`;
+  }
+  return `<div class="mono" style="white-space:nowrap" title="${esc((open || "未知") + " 至 " + (end || "未知"))}">${esc(mmdd(open))} → ${esc(mmdd(end))}</div>${status ? `<div style="margin-top:2px">${status}</div>` : ""}`;
+}
+function md(text) {
+  if (!text) return "";
+  const lines = String(text).split(/\n/);
+  let out = "", inList = false;
+  const inline = s => esc(s).replace(/\*\*(.+?)\*\*/g, "<b>$1</b>");
+  for (let raw of lines) {
+    const l = raw.trim();
+    if (/^[-•·*]\s+/.test(l) || /^\d+[.、)]\s*/.test(l)) {
+      if (!inList) { out += "<ul>"; inList = true; }
+      out += "<li>" + inline(l.replace(/^([-•·*]|\d+[.、)])\s*/, "")) + "</li>";
+    } else {
+      if (inList) { out += "</ul>"; inList = false; }
+      if (l) out += "<p>" + inline(l) + "</p>";
+    }
+  }
+  if (inList) out += "</ul>";
+  return `<div class="md">${out}</div>`;
+}
+let toastT;
+function toast(msg, bad) { const t = $("#toast"); t.textContent = msg; t.className = "toast" + (bad ? " bad" : ""); t.hidden = false; clearTimeout(toastT); toastT = setTimeout(() => t.hidden = true, bad ? 6000 : 3200); }
+function loadScript(src) {
+  loadScript.pending ||= new Map();
+  if (loadScript.pending.has(src)) return loadScript.pending.get(src);
+  const task = new Promise((res, rej) => {
+    const s = document.createElement("script"); s.src = src; s.onload = res;
+    s.onerror = () => { s.remove(); loadScript.pending.delete(src); rej(new Error("加载组件失败：" + src.split("/").pop() + "，请确认已运行 prepare_assets.py 后重试。")); };
+    document.head.appendChild(s);
+  });
+  loadScript.pending.set(src, task); return task;
+}
+function errText(e) {
+  const c = e && e.code;
+  const map = {
+    not_granted: "这个网页还没获准调用 Claude，可在页面右上角的权限菜单里允许。",
+    rate_limited: "请求有点多，等一分钟再试。",
+    invalid_json: "AI 返回的格式不完整，请再点一次。",
+    tools_unavailable: "当前环境不支持联网检索工具，请改用「交给 Claude 处理」。",
+    server_not_connected: "需要在 Claude 桌面 App 里打开本页才能使用内置浏览器。",
+    cancelled: "已取消。",
+    not_in_manifest: "你拒绝了这个网页使用内置浏览器，可在权限菜单里重新允许。",
+    tool_error: "浏览器操作失败：" + (e && e.message || ""),
+    quota_exceeded: "数据空间已满，删除一些旧记录后再试。",
+    unavailable: "暂时不可用，请稍后再试。",
+  };
+  return map[c] || (e && e.message) || "出错了，请重试。";
+}
+function setBusy(key, v) { if (v) S.busy[key] = v; else delete S.busy[key]; render(); }
+function log(key, line) { (S.logs[key] = S.logs[key] || []).push(line); const el = document.getElementById("log-" + key); if (el) { el.textContent = S.logs[key].join("\n"); el.scrollTop = el.scrollHeight; } }
+
+/* ============ data layer ============ */
+const db = {
+  coll: n => S.db.collection(n),
+  async set(path, data) { await S.db.doc(path).set(data); },
+  async update(path, data) { await S.db.doc(path).update(data); },
+  async del(path) { await S.db.doc(path).delete(); },
+};
+function extrasText(app) { const xs = (app && app.extras) || []; return xs.length ? xs.map((x, i) => `（${i + 1}）${x.text}`).join("\n") : ""; }
+function extrasBlock(app, max = 6000) { const t = extrasText(app); return t ? `\n用户补充的关键信息（来自她自己整理的内部消息、面经、宣讲会或 HR 沟通，可信度高；与 JD 冲突时以此为准，并在分析里体现）：\n${t.slice(0, max)}\n` : ""; }
+const fitOf = c => c.fit || (S.d.fitMap || {})[c.id] || null;
+const byId = (coll, id) => S.d[coll].find(x => x.id === id);
+const appById = id => byId("applications", id);
+async function saveApp(app, patch) {
+  const next = { ...app, ...patch, updatedAt: new Date().toISOString() };
+  delete next.id;
+  await db.set("applications/" + app.id, next);
+  return { id: app.id, ...next };
+}
+function subscribe() {
+  for (const n of COLLS) {
+    db.coll(n).onSnapshot(snap => { S.d[n] = snap.docs.map(d => ({ id: d.id, ...d.data() })); schedRender(); },
+      e => { if (e.code === "revoked") { S.fatal = "访问权限已变化，请刷新页面。"; render(); } });
+  }
+  S.db.doc("profile/main").onSnapshot(s => { S.d.profile = s.exists ? s.data() : null; schedRender("profile"); }, () => {});
+  S.db.doc("meta/fit").onSnapshot(s => { S.d.fitMap = s.exists ? (s.data().scores || {}) : {}; schedRender(); }, () => {});
+  S.db.doc("meta/status").onSnapshot(s => { S.d.meta = s.exists ? s.data() : null; schedRender(); }, () => {});
+}
+
+/* ============ AI ============ */
+async function ai(prompt, opts = {}) {
+  if (!S.sample) throw { message: "AI 尚未连接，请在「数据与 AI 设置」中测试连接。" };
+  const o = { modelTier: opts.tier || "default" };
+  if (opts.tools) o.tools = opts.tools; else o.cache = false;
+  if (opts.signal) o.signal = opts.signal;
+  if (opts.onText) o.onText = opts.onText;
+  if (opts.images) o.images = opts.images;
+  return S.sample.json(prompt, o);
+}
+function profileBrief(withContact) {
+  const p = S.d.profile || {};
+  const b = p.basic || {};
+  const base = { 姓名: b.name, 学历: (p.education || []).map(e => [e.school, e.college, e.major, e.degree, (e.start || "") + "~" + (e.end || ""), e.gpa && ("GPA " + e.gpa), e.rank].filter(Boolean).join(" ")), 语言: p.languages, 技能: p.skills, 获奖: p.awards, 目标方向: (p.targets && p.targets.length ? p.targets : DIRS).join("、") };
+  if (withContact) Object.assign(base, { 联系: b });
+  return base;
+}
+function expBrief(ids) {
+  const list = ids ? S.d.experiences.filter(e => ids.includes(e.id)) : S.d.experiences;
+  return list.map(e => ({ id: e.id, 类型: EXP_TYPES[e.type] || e.type, 机构: e.org, 角色: e.role, 时间: (e.start || "") + "~" + (e.end || ""), 要点: e.bullets || [] }));
+}
+
+/* ============ in-app browser (Claude desktop) ============ */
+async function br(tool, input) { return S.mcp.callTool(HOST, tool, input); }
+function rtext(r) {
+  if (!r) return "";
+  const t = (r.content || []).filter(b => b.type === "text").map(b => b.text).join("\n");
+  if (t) return t;
+  return typeof r.payload === "string" ? r.payload : JSON.stringify(r.payload ?? "");
+}
+async function openTab(url) {
+  const r = await br("preview_start", { url });
+  if (r && r.payload && typeof r.payload === "object" && r.payload.tabId) return String(r.payload.tabId);
+  const m = rtext(r).match(/tab[_\s-]?id["'\s:=]*["']?([A-Za-z0-9_-]+)/i);
+  return m ? m[1] : null;
+}
+const withTab = (tab, o) => (tab ? { ...o, tabId: tab } : o);
+async function pageText(tab, max = 20000) { return rtext(await br("get_page_text", withTab(tab, { max_chars: max }))); }
+
+/* ============ file reading ============ */
+async function fileText(file) {
+  const name = file.name.toLowerCase();
+  if (name.endsWith(".pdf")) {
+    await loadScript(LIBS.pdf); await loadScript(LIBS.pdfw);
+    const lib = window.pdfjsLib; lib.GlobalWorkerOptions.workerSrc = LIBS.pdfw;
+    const pdf = await lib.getDocument({ data: new Uint8Array(await file.arrayBuffer()) }).promise;
+    let out = "";
+    for (let i = 1; i <= pdf.numPages; i++) {
+      const page = await pdf.getPage(i); const c = await page.getTextContent();
+      let lastY = null;
+      for (const it of c.items) { const y = it.transform ? it.transform[5] : null; if (lastY !== null && y !== null && Math.abs(y - lastY) > 2) out += "\n"; out += it.str; lastY = y; }
+      out += "\n\n";
+    }
+    return out;
+  }
+  if (name.endsWith(".docx")) {
+    await loadScript(LIBS.mammoth);
+    const r = await window.mammoth.extractRawText({ arrayBuffer: await file.arrayBuffer() });
+    return r.value;
+  }
+  return file.text();
+}
+
+/* ============ zip + ics ============ */
+const CRC = (() => { const t = new Uint32Array(256); for (let n = 0; n < 256; n++) { let c = n; for (let k = 0; k < 8; k++) c = c & 1 ? 0xedb88320 ^ (c >>> 1) : c >>> 1; t[n] = c >>> 0; } return t; })();
+function crc32(u8) { let c = 0xffffffff; for (let i = 0; i < u8.length; i++) c = CRC[(c ^ u8[i]) & 255] ^ (c >>> 8); return (c ^ 0xffffffff) >>> 0; }
+function zipStore(files) {
+  const enc = new TextEncoder(); const chunks = []; const central = []; let off = 0;
+  const now = new Date(); const dt = ((now.getHours() << 11) | (now.getMinutes() << 5) | (now.getSeconds() >> 1)) & 0xffff; const dd = (((now.getFullYear() - 1980) << 9) | ((now.getMonth() + 1) << 5) | now.getDate()) & 0xffff;
+  for (const f of files) {
+    const name = enc.encode(f.name); const data = typeof f.data === "string" ? enc.encode(f.data) : f.data; const crc = crc32(data);
+    const lh = new DataView(new ArrayBuffer(30));
+    lh.setUint32(0, 0x04034b50, true); lh.setUint16(4, 20, true); lh.setUint16(6, 0x0800, true); lh.setUint16(8, 0, true);
+    lh.setUint16(10, dt, true); lh.setUint16(12, dd, true); lh.setUint32(14, crc, true); lh.setUint32(18, data.length, true); lh.setUint32(22, data.length, true);
+    lh.setUint16(26, name.length, true); lh.setUint16(28, 0, true);
+    chunks.push(new Uint8Array(lh.buffer), name, data);
+    const ch = new DataView(new ArrayBuffer(46));
+    ch.setUint32(0, 0x02014b50, true); ch.setUint16(4, 20, true); ch.setUint16(6, 20, true); ch.setUint16(8, 0x0800, true); ch.setUint16(10, 0, true);
+    ch.setUint16(12, dt, true); ch.setUint16(14, dd, true); ch.setUint32(16, crc, true); ch.setUint32(20, data.length, true); ch.setUint32(24, data.length, true);
+    ch.setUint16(28, name.length, true); ch.setUint32(42, off, true);
+    central.push(new Uint8Array(ch.buffer), name);
+    off += 30 + name.length + data.length;
+  }
+  const cSize = central.reduce((a, b) => a + b.length, 0);
+  const end = new DataView(new ArrayBuffer(22));
+  end.setUint32(0, 0x06054b50, true); end.setUint16(8, files.length, true); end.setUint16(10, files.length, true); end.setUint32(12, cSize, true); end.setUint32(16, off, true);
+  const all = [...chunks, ...central, new Uint8Array(end.buffer)]; const total = all.reduce((a, b) => a + b.length, 0);
+  const out = new Uint8Array(total); let p = 0; for (const a of all) { out.set(a, p); p += a.length; } return out;
+}
+function icsDate(iso) { return new Date(iso).toISOString().replace(/[-:]/g, "").replace(/\.\d{3}/, ""); }
+function icsEsc(s) { return String(s || "").replace(/\\/g, "\\\\").replace(/;/g, "\\;").replace(/,/g, "\\,").replace(/\r?\n/g, "\\n"); }
+function fold(line) { const out = []; let cur = ""; for (const ch of line) { if (new TextEncoder().encode(cur + ch).length > 73) { out.push(cur); cur = " " + ch; } else cur += ch; } out.push(cur); return out.join("\r\n"); }
+function buildICS(events) {
+  const L = ["BEGIN:VCALENDAR", "VERSION:2.0", "PRODID:-//Kaledin Job Desk//CN", "CALSCALE:GREGORIAN", "METHOD:PUBLISH", "X-WR-TIMEZONE:Asia/Shanghai"];
+  for (const ev of events) {
+    const end = ev.end || new Date(new Date(ev.start).getTime() + (ev.mins || 60) * 6e4).toISOString();
+    L.push("BEGIN:VEVENT", "UID:" + ev.id + "@kaledin-jobdesk", "DTSTAMP:" + icsDate(new Date().toISOString()), "DTSTART:" + icsDate(ev.start), "DTEND:" + icsDate(end),
+      fold("SUMMARY:" + icsEsc(ev.title)));
+    if (ev.location) L.push(fold("LOCATION:" + icsEsc(ev.location)));
+    if (ev.note) L.push(fold("DESCRIPTION:" + icsEsc(ev.note)));
+    for (const m of ev.alarms || [1440, 60]) L.push("BEGIN:VALARM", "ACTION:DISPLAY", "DESCRIPTION:" + icsEsc(ev.title), "TRIGGER:-PT" + m + "M", "END:VALARM");
+    L.push("END:VEVENT");
+  }
+  L.push("END:VCALENDAR");
+  return L.join("\r\n") + "\r\n";
+}
+async function saveFile(filename, data) {
+  if (!S.dl) { toast("当前环境不能保存文件。", true); return false; }
+  try { await S.dl.save({ filename, data }); return true; }
+  catch (e) { if (e.code !== "declined") toast(e.code === "rejected_extension" ? "不支持这种文件格式。" : "保存失败：" + (e.message || e.code), true); return false; }
+}
+async function downloadEvents(events, base) {
+  const ics = buildICS(events);
+  const safe = String(base).replace(/[\\/:*?"<>|]/g, "-").slice(0, 60);
+  const zip = zipStore([{ name: safe + ".ics", data: ics }]);
+  const ok = await saveFile(safe + "-日历.zip", new Blob([zip], { type: "application/zip" }));
+  if (ok) toast("已保存。解压后双击 .ics 即可加入苹果日历。");
+}
+/* ============ render shell ============ */
+let rq = 0;
+function schedRender(kind) {
+  if (kind === "profile" && S.view === "profile" && S.profileDirty) return;
+  cancelAnimationFrame(rq);
+  rq = requestAnimationFrame(() => {
+    const a = document.activeElement;
+    if (a && $("#main").contains(a) && /INPUT|TEXTAREA|SELECT/.test(a.tagName) && a.type !== "checkbox") { a.addEventListener("blur", () => schedRender(), { once: true }); return; }
+    render();
+  });
+}
+function render(force = false) {
+  if (S.composing) { S._pendingRender = true; return; }
+  const counts = { apps: S.d.applications.filter(a => !DONE.has(a.status)).length, companies: S.d.companies.length, resumes: S.d.experiences.length, calendar: upcoming().length };
+  $("#nav").innerHTML = VIEWS.map(([k, label]) => `<button data-act="go" data-v="${k}" aria-current="${S.view === k && !S.appId}"><span>${label}</span>${counts[k] ? `<span class="n">${counts[k]}</span>` : ""}</button>`).join("");
+  $("#railfoot").innerHTML = `
+    <div><span class="dot ${S.db ? "on" : "off"}"></span>${S.db ? "数据已同步" : "数据未连接"}</div>
+    ${S.local ? localRail() : `<div><span class="dot ${S.hostOK ? "on" : "off"}"></span>${S.hostOK ? "内置浏览器可用" : "内置浏览器不可用"}</div>`}
+    <label class="f"><span>检索引擎</span><select id="engine" data-change="engine"><option value="bing" ${S.engine === "bing" ? "selected" : ""}>必应中国</option><option value="baidu" ${S.engine === "baidu" ? "selected" : ""}>百度</option></select></label>`;
+  const m = $("#main");
+  if (!force && S.view === "profile" && !S.appId && S.profileDirty && m.querySelector("#pf")) return;
+  if (S.fatal) { m.innerHTML = `<div class="empty"><h3>无法打开</h3><p>${esc(S.fatal)}</p></div>`; return; }
+  if (!S.ready) { m.innerHTML = `<div class="empty"><h3>正在载入</h3><p>连接你的求职数据…</p></div>`; return; }
+  const sy = window.scrollY;
+  const ae = document.activeElement; const fk = ae && ae.dataset && /^(afq|cfq)$/.test(ae.dataset.input || "") ? ae.dataset.input : null; const fpos = fk ? ae.selectionStart : null;
+  m.innerHTML = S.appId && appById(S.appId) ? viewApp(appById(S.appId)) : (V[S.view] || V.dash)();
+  window.scrollTo(0, sy);
+  if (fk) { const el = $(`[data-input="${fk}"]`); if (el) { el.focus(); const p = Math.min(fpos ?? el.value.length, el.value.length); el.setSelectionRange(p, p); } }
+}
+function upcoming() {
+  const now = Date.now() - 2 * 36e5; const out = [];
+  for (const a of S.d.applications) for (const ev of a.events || []) if (new Date(ev.start).getTime() >= now) out.push({ ...ev, app: a });
+  return out.sort((x, y) => new Date(x.start) - new Date(y.start));
+}
+function evRow(ev) {
+  const d = new Date(ev.start);
+  return `<div class="li"><div class="date-tag"><b>${d.getMonth() + 1}/${d.getDate()}</b>${hm(d)} 周${"日一二三四五六"[d.getDay()]}</div>
+    <div class="grow"><div><b>${esc(ev.app.company)}</b> · ${esc(ev.type || "")}</div><div class="note">${esc(ev.app.role || "")}${ev.location ? " · " + esc(ev.location) : ""}</div></div>
+    <button class="btn sm" data-act="ics1" data-app="${ev.app.id}" data-ev="${ev.id}">日历文件</button></div>`;
+}
+
+const V = {};
+/* ---- 总览 ---- */
+V.dash = () => {
+  const apps = S.d.applications;
+  const active = apps.filter(a => !DONE.has(a.status) && a.status !== "待投递");
+  const up = upcoming();
+  const week = up.filter(e => new Date(e.start) - Date.now() < 7 * 864e5);
+  const appliedNames = new Set(apps.map(a => a.company));
+  const soon = S.d.companies.filter(c => { const n = daysLeft(c.deadline); return n !== null && n >= 0 && n <= 10 && !appliedNames.has(c.name); }).sort((a, b) => daysLeft(a.deadline) - daysLeft(b.deadline));
+  const pend = S.d.queue.filter(q => q.status !== "done");
+  const hasProfile = !!(S.d.profile && S.d.profile.basic && S.d.profile.basic.name);
+  const steps = [
+    [S.d.resumes.length > 0, "上传简历", "把你的各版简历拖进来，AI 会整理成经历库", "resumes"],
+    [hasProfile, "核对报名信息", "一键填表用的姓名、联系方式、教育经历等", "profile"],
+    [S.d.companies.length > 0, "导入公司库", "导入 CSV/Excel，或手动添加单位", "companies"],
+    [apps.length > 0, "新增第一个投递", "贴上招聘网址，自动分析匹配度", "apps"],
+  ];
+  const meta = S.d.meta || {};
+  return `<div class="head"><div><div class="eyebrow">${today()} · Asia/Shanghai</div><h1>今天的求职台</h1></div>
+    <div class="row"><button class="btn primary" data-act="newApp">新增投递</button></div></div>
+  ${steps.some(s => !s[0]) ? `<div class="sheet" style="margin-bottom:16px"><h2>开始使用</h2><div class="list">${steps.map(([done, t, d, v], i) => `
+     <div class="li"><span class="pill ${done ? "ok" : ""} mono">${done ? "完成" : "第 " + (i + 1) + " 步"}</span><div class="grow"><b>${t}</b><div class="note">${d}</div></div>${done ? "" : `<button class="btn sm" data-act="go" data-v="${v}">去完成</button>`}</div>`).join("")}</div></div>` : ""}
+  <div class="kpis">
+    <div class="kpi"><b>${active.length}</b><span>进行中的投递</span></div>
+    <div class="kpi"><b>${week.length}</b><span>7 天内笔试/面试</span></div>
+    <div class="kpi"><b>${soon.length}</b><span>10 天内截止（未投）</span></div>
+    <div class="kpi"><b>${apps.filter(a => a.status === "Offer").length}</b><span>Offer</span></div>
+  </div>
+  <div class="grid2">
+    <section class="sheet"><h2>接下来的日程</h2>${up.length ? `<div class="list">${up.slice(0, 6).map(evRow).join("")}</div>` : `<p class="note">还没有笔试或面试。投递状态改成「笔试」「一面」等阶段时，会弹窗让你确认时间并生成日历文件。</p>`}</section>
+    <section class="sheet"><h2>截止临近</h2>${soon.length ? `<div class="list">${soon.slice(0, 7).map(c => `<div class="li"><div class="grow"><b>${esc(c.name)}</b><div class="note">${esc(c.batch || "")} ${esc(c.roles || "").slice(0, 40)}</div></div><span class="note mono">${esc(mmdd(c.openDate))} → ${esc(mmdd(c.deadline))}</span>${dlPill(c.deadline)}<button class="btn sm" data-act="applyCo" data-id="${c.id}">投递</button></div>`).join("")}</div>` : `<p class="note">10 天内没有要截止、且你还没投的公司。</p>`}</section>
+    <section class="sheet"><h2>岗位更新</h2>${meta.lastDaily ? `<p class="note mono">最近一次：${esc(meta.lastDaily)}</p>${md(meta.dailySummary || "")}` : `<p class="note">按你的目标方向检索公开招聘信息，结果需核对官方原文。不会在后台自动运行。</p>`}
+    ${S.local ? `<button class="btn" data-act="localJobs" ${S.busy.jobs || S.aiStatus?.provider !== "codex" ? "disabled" : ""}>${S.busy.jobs ? "检索中…" : "用 Codex 检索岗位"}</button>` : ""}</section>
+    <section class="sheet"><h2>待处理的分析</h2>${pend.length ? `<div class="list">${pend.map(q => `<div class="li"><div class="grow">${esc(q.label || q.type)}</div>${S.local ? `<button class="btn sm" data-act="runDeep" data-id="${esc(q.applicationId)}" ${S.busy["prep-" + q.applicationId] ? "disabled" : ""}>开始分析</button>` : ""}<button class="btn ghost sm" data-act="dropQ" data-id="${q.id}">撤销</button></div>`).join("")}</div>` : `<p class="note">没有排队的任务。</p>`}</section>
+  </div>`;
+};
+
+/* ---- 投递 ---- */
+V.apps = () => {
+  const f = S.af;
+  let list = S.d.applications.slice().sort((a, b) => (b.updatedAt || "").localeCompare(a.updatedAt || ""));
+  if (f.status) list = list.filter(a => (a.status || "待投递") === f.status);
+  if (f.q) { const q = f.q.toLowerCase(); list = list.filter(a => [a.company, a.role, a.city, posSummary(a)].join(" ").toLowerCase().includes(q)); }
+  const nextEv = a => (a.events || []).filter(e => new Date(e.start) > Date.now()).sort((x, y) => new Date(x.start) - new Date(y.start))[0];
+  return `<div class="head"><div><h1>投递</h1><p class="sub">每条投递有自己的匹配分析、定制简历、填表助手和面试准备。</p></div>
+    <button class="btn primary" data-act="newApp">新增投递</button></div>
+  <div class="row" style="margin-bottom:12px"><input type="search" id="af-q" placeholder="搜索公司、岗位" value="${esc(f.q)}" data-input="afq" style="max-width:260px">
+    <div class="row">${["", ...STATUSES].map(s => `<button class="chip" data-act="afStatus" data-s="${s}" aria-pressed="${f.status === s}">${s || "全部"}</button>`).join("")}</div></div>
+  ${list.length ? `<div class="tbl-wrap"><table><thead><tr><th>公司 / 岗位</th><th>状态</th><th>匹配</th><th>下一场</th><th>截止</th><th>更新</th></tr></thead><tbody>
+  ${list.map(a => { const ne = nextEv(a); return `<tr data-act="openApp" data-id="${a.id}" style="cursor:pointer">
+    <td><div class="t1">${esc(a.company || "未命名公司")}</div><div class="t2">${esc(posSummary(a))}${a.city ? " · " + esc(a.city) : ""}</div></td>
+    <td><select data-change="status" data-id="${a.id}" aria-label="投递状态" style="width:auto">${STATUSES.map(s => `<option ${s === (a.status || "待投递") ? "selected" : ""}>${s}</option>`).join("")}</select></td>
+    <td>${a.match ? `<span class="score ${scoreCls(a.match.score)}">${a.match.score}</span>` : `<span class="note">未分析</span>`}</td>
+    <td>${ne ? `<span class="mono">${esc(ne.type)} ${new Date(ne.start).getMonth() + 1}/${new Date(ne.start).getDate()} ${hm(new Date(ne.start))}</span>` : `<span class="note">—</span>`}</td>
+    <td>${dlPill(a.deadline)}</td><td class="mono t2">${esc((a.updatedAt || "").slice(5, 10))}</td></tr>`; }).join("")}
+  </tbody></table></div>` : `<div class="empty"><h3>${S.d.applications.length ? "没有符合筛选的投递" : "还没有投递"}</h3><p>点「新增投递」，贴上公司招聘官网或岗位链接；也可以在公司库里直接点「投递」。</p></div>`}`;
+};
+
+/* ---- 公司库 ---- */
+function addedKey(c) { const m = String(c.id || "").match(/^cl-(\d{4})(\d{2})(\d{2})/); return c.addedAt || (m ? `${m[1]}-${m[2]}-${m[3]}` : "") || c.verifiedAt || c.syncedAt || ""; }
+V.companies = () => {
+  const f = S.cf;
+  let list = S.d.companies.slice();
+  if (f.dir) list = list.filter(c => (c.category || "") === f.dir);
+  if (f.open) list = list.filter(c => { const n = daysLeft(c.deadline); return c.status !== "closed" && (n === null || n >= 0); });
+  if (f.q) { const q = f.q.toLowerCase(); list = list.filter(c => [c.name, c.industry, c.roles, c.cities, c.nature, c.notes].join(" ").toLowerCase().includes(q)); }
+  if (f.star) list = list.filter(c => c.starred);
+  if (f.wait) list = list.filter(c => c.status === "notStarted" || c.status === "watch");
+  if (f.src === "claude") list = list.filter(c => ["Claude", "Codex"].includes(c.source));
+  else if (f.src === "feishu") list = list.filter(c => c.source === "飞书");
+  else if (f.src === "post") list = list.filter(c => c.source === "推送" || c.source === "手动");
+  const byDl = (a, b) => (daysLeft(a.deadline) ?? 9999) - (daysLeft(b.deadline) ?? 9999);
+  if (f.sort === "new") list.sort((a, b) => { const ca = ["Claude", "Codex"].includes(a.source), cb = ["Claude", "Codex"].includes(b.source); if (ca !== cb) return ca ? -1 : 1; if (ca) { const d = addedKey(b).localeCompare(addedKey(a)); if (d) return d; } return byDl(a, b); });
+  else if (f.sort === "fit") list.sort((a, b) => ((fitOf(b) || {}).score ?? -1) - ((fitOf(a) || {}).score ?? -1) || byDl(a, b));
+  else list.sort(byDl);
+  const starN = S.d.companies.filter(c => c.starred).length;
+  const latest = S.d.companies.filter(c => ["Claude", "Codex"].includes(c.source)).map(addedKey).sort().pop() || "";
+  const applied = new Map(S.d.applications.map(a => [a.company, a]));
+  const src = c => ["Claude", "Codex"].includes(c.source) ? `<span class="pill acc">AI 补充</span>` : c.source === "飞书" ? `<span class="pill">飞书</span>` : `<span class="pill">${esc(c.source || "手动")}</span>`;
+  return `<div class="head"><div><h1>公司库</h1><p class="sub">导入公司表、手动添加，或从招聘推送提取岗位。</p></div>
+    <div class="row">${S.hostOK ? `<button class="btn primary" data-act="feishu" ${S.busy.import ? "disabled" : ""}>${S.busy.import ? `<span class="spin"></span> ${esc(typeof S.busy.import === "string" ? S.busy.import : "同步中…")}` : "从飞书同步"}</button>` : `<span class="note">飞书表可导出后导入</span>`}<button class="btn" data-act="importCo">导入 CSV / Excel</button><button class="btn" data-act="addPost">从招聘推送添加</button><button class="btn" data-act="addCo">手动添加</button></div></div>
+  <div class="row" style="margin-bottom:12px"><input type="search" placeholder="搜索单位、岗位、城市、备注" value="${esc(f.q)}" data-input="cfq" style="max-width:280px">
+    <div class="row">${["", ...DIRS].map(d => `<button class="chip" data-act="cfDir" data-d="${esc(d)}" aria-pressed="${f.dir === d}">${d || "全部方向"}</button>`).join("")}</div>
+    <button class="chip" data-act="cfStar" aria-pressed="${f.star}">★ 只看标星 <span class="mono">${starN}</span></button>
+    <button class="chip" data-act="cfWait" aria-pressed="${f.wait}">未开放·关注中 <span class="mono">${S.d.companies.filter(c => c.status === "notStarted" || c.status === "watch").length}</span></button>
+    <button class="chip" data-act="cfSrc" data-s="claude" aria-pressed="${f.src === "claude"}">AI 新增 <span class="mono">${S.d.companies.filter(c => ["Claude", "Codex"].includes(c.source)).length}</span></button>
+    <button class="chip" data-act="cfSrc" data-s="feishu" aria-pressed="${f.src === "feishu"}">飞书 <span class="mono">${S.d.companies.filter(c => c.source === "飞书").length}</span></button>
+    <button class="chip" data-act="cfSrc" data-s="post" aria-pressed="${f.src === "post"}">我添加 <span class="mono">${S.d.companies.filter(c => c.source === "推送" || c.source === "手动").length}</span></button>
+    <label class="row note"><input type="checkbox" data-change="cfOpen" ${f.open ? "checked" : ""}> 只看未截止</label>
+    <label class="row note">排序 <select data-change="cfSort" style="width:auto"><option value="new" ${f.sort === "new" ? "selected" : ""}>AI 新增优先</option><option value="dl" ${f.sort === "dl" ? "selected" : ""}>截止最近优先</option><option value="fit" ${f.sort === "fit" ? "selected" : ""}>匹配度最高</option></select></label></div>
+  ${list.length ? `<div class="tbl-wrap"><table><thead><tr><th>公司</th><th>方向 / 性质</th><th>批次 · 岗位</th><th>匹配度</th><th>城市</th><th>报名时间<div class="t2" style="font-weight:400">开始 → 截止</div></th><th>来源</th><th></th></tr></thead><tbody>
+  ${list.map(c => { const a = applied.get(c.name); return `<tr>
+    <td><div class="row" style="flex-wrap:nowrap;align-items:flex-start;gap:8px"><button class="star" data-act="star" data-id="${c.id}" aria-pressed="${!!c.starred}" aria-label="${c.starred ? "取消标星" : "标星"}" title="${c.starred ? "取消标星" : "觉得合适就标星"}">${c.starred ? "★" : "☆"}</button>
+      <div><div class="t1">${c.url ? `<a href="${safeURL(c.url)}" target="_blank" rel="noopener">${esc(c.name)}</a>` : esc(c.name)}${["Claude", "Codex"].includes(c.source) && latest && addedKey(c) === latest ? ` <span class="pill acc">新</span>` : ""}</div><div class="t2">${esc(c.industry || "")}</div>${c.group ? `<span class="pill acc" style="margin-top:2px">${esc(c.group)}</span>` : ""}${c.myNote || c.myLink ? `<div class="row" style="gap:6px;margin-top:2px">${c.myNote ? `<span class="pill warn">${esc(c.myNote)}</span>` : ""}${c.myLink ? `<a class="t2" href="${safeURL(c.myLink)}" target="_blank" rel="noopener">我的链接</a>` : ""}</div>` : ""}${c.notes && String(c.notes).trim() !== "无" ? `<div class="t2 clamp" title="${esc(c.notes)}" data-act="toggleClamp">${esc(c.notes)}</div>` : ""}</div></div></td>
+    <td><div>${esc(c.category || "未分类")}</div><div class="t2">${esc(c.nature || "")}</div></td>
+    <td><div>${esc(c.batch || "")}${c.edu ? ` <span class="t2">${esc(c.edu)}</span>` : ""}</div><div class="t2">${esc(String(c.roles || "").slice(0, 60))}</div></td>
+    <td style="max-width:220px">${fitOf(c) ? `<span class="score ${scoreCls(fitOf(c).score)}">${fitOf(c).score}</span><div class="t2">${esc(fitOf(c).reason || "")}</div>` : `<span class="note">—</span>`}</td>
+    <td class="t2" style="max-width:140px">${esc(String(c.cities || "").slice(0, 40))}</td><td>${periodCell(c)}</td>
+    <td>${src(c)}${c.feishuUrl ? ` <a class="t2" href="${safeURL(c.feishuUrl)}" target="_blank" rel="noopener">飞书原表</a>` : ""}${c.noExam ? `<div><span class="pill ok">免笔试</span></div>` : ""}${c.verifiedAt ? `<div class="t2 mono">核实 ${esc(c.verifiedAt.slice(5, 10))}</div>` : ""}</td>
+    <td><div class="row">${a ? `<button class="btn sm" data-act="openApp" data-id="${a.id}">${esc(a.status || "待投递")}</button>` : `<button class="btn sm primary" data-act="applyCo" data-id="${c.id}">投递</button>`}<button class="btn ghost sm" data-act="editCo" data-id="${c.id}">编辑</button></div></td></tr>`; }).join("")}
+  </tbody></table></div><p class="note">共 ${list.length} 家（库内 ${S.d.companies.length} 家）</p>` : `<div class="empty"><h3>${S.d.companies.length ? "没有符合筛选的公司" : "公司库是空的"}</h3><p>在飞书里把表格导出为 Excel 或 CSV，点「导入 CSV / Excel」；同名公司同批次会自动合并更新。</p></div>`}`;
+};
+
+/* ---- 简历与经历 ---- */
+V.resumes = () => {
+  const ex = S.d.experiences.slice().sort((a, b) => (b.end || "9999").localeCompare(a.end || "9999"));
+  const groups = {};
+  for (const e of ex) (groups[e.type] = groups[e.type] || []).push(e);
+  return `<div class="head"><div><h1>简历与经历</h1><p class="sub">原始简历留档；经历库是去重后的事实底稿，定制简历只改表述、不改事实。</p></div>
+    <div class="row"><button class="btn" data-act="addExp">添加经历</button><button class="btn primary" data-act="organize" ${S.d.resumes.length && !S.busy.organize ? "" : "disabled"}>${S.busy.organize ? `<span class="spin"></span> 整理中…` : "AI 整理经历库"}</button></div></div>
+  <div class="grid2" style="grid-template-columns:minmax(0,1fr) minmax(0,2fr)">
+    <section class="stack">
+      ${profileCard()}
+      <label class="drop" id="drop" for="resume-file"><b>拖入或点击上传简历</b><div class="note">PDF、Word（.docx）、图片、TXT、Markdown，可一次多份；扫描版 PDF 会自动 OCR</div></label>
+      <input type="file" id="resume-file" accept=".pdf,.docx,.txt,.md,.png,.jpg,.jpeg,.webp" multiple hidden data-change="resumeFiles">
+      ${S.busy.upload ? `<p class="note"><span class="spin"></span> ${esc(S.busy.upload)}</p>` : ""}
+      <div class="sheet"><h2>原始简历 <span class="note mono">${S.d.resumes.length}</span></h2>
+      ${S.d.resumes.length ? `<div class="list">${S.d.resumes.map(r => `<div class="li"><div class="grow"><b>${esc(r.title)}</b><div class="note mono">${esc((r.createdAt || "").slice(0, 10))} · ${(r.text || "").length} 字${r.ocr ? " · OCR" : ""}</div></div><button class="btn ghost sm" data-act="viewResume" data-id="${r.id}">查看</button><button class="btn ghost sm danger" data-act="delResume" data-id="${r.id}">删除</button></div>`).join("")}</div>` : `<p class="note">还没有上传。上传 TXT、Markdown 或文档后，点击「AI 整理经历库」。</p>`}</div>
+    </section>
+    <section class="sheet"><h2>经历库 <span class="note mono">${ex.length}</span></h2>
+    ${ex.length ? Object.keys(EXP_TYPES).filter(t => groups[t]).map(t => `<div style="margin-top:10px"><div class="eyebrow">${EXP_TYPES[t]}</div><div class="list">${groups[t].map(e => `
+      <div class="li"><div class="date-tag">${esc(e.start || "")}<br>${esc(e.end || "")}</div><div class="grow"><b>${esc(e.org)}</b> · ${esc(e.role || "")}
+        <ul style="margin:4px 0 0;padding-left:18px">${(e.bullets || []).map(b => `<li>${esc(b)}</li>`).join("")}</ul>
+        ${(e.tags || []).length ? `<div class="row" style="margin-top:4px">${e.tags.map(t => `<span class="pill">${esc(t)}</span>`).join("")}</div>` : ""}</div>
+        <button class="btn ghost sm" data-act="editExp" data-id="${e.id}">编辑</button></div>`).join("")}</div></div>`).join("") : `<div class="empty"><h3>经历库是空的</h3><p>上传简历后点「AI 整理经历库」，它会把多份简历里的同一段经历合并，保留最完整的表述。</p></div>`}
+    </section></div>`;
+};
+
+function profileCard() {
+  const p = S.d.profile; const b = (p && p.basic) || {};
+  if (!p) return `<div class="sheet"><h2>基本信息</h2><p class="note">整理经历库时会一并提取姓名、联系方式、教育经历，之后在「报名信息」里核对。</p></div>`;
+  const flat = JSON.stringify(p);
+  const conflicts = (flat.match(/另有版本|一版记|另一版/g) || []).length;
+  return `<div class="sheet"><div class="row" style="justify-content:space-between"><h2 style="margin:0">基本信息</h2><button class="btn sm" data-act="go" data-v="profile">去核对</button></div>
+    <div class="list" style="margin-top:6px">
+      <div class="li"><span class="note" style="min-width:56px">姓名</span><b class="grow">${esc(b.name || "—")}</b></div>
+      <div class="li"><span class="note" style="min-width:56px">手机</span><span class="grow mono">${esc(b.phone || "—")}</span></div>
+      <div class="li"><span class="note" style="min-width:56px">邮箱</span><span class="grow mono" style="word-break:break-all">${esc(b.email || "—")}</span></div>
+      <div class="li"><span class="note" style="min-width:56px">教育</span><span class="grow">${(p.education || []).map(e => esc(e.school)).join(" · ") || "—"}</span></div>
+    </div>
+    ${conflicts ? `<div class="callout" style="margin-top:8px">有 ${conflicts} 处不同版本的简历写法不一致（标着「另有版本」），一键填表会原样填进去，请在「报名信息」里改成一个准确的写法。</div>` : `<p class="note" style="margin-top:6px">网申时用的是「报名信息」里的资料，修改请到那里。</p>`}</div>`;
+}
+/* ---- 报名信息 ---- */
+const BASIC = [["name", "姓名"], ["nameEn", "英文名"], ["gender", "性别"], ["birth", "出生年月"], ["phone", "手机"], ["email", "邮箱"], ["wechat", "微信"], ["politics", "政治面貌"], ["ethnicity", "民族"], ["hometown", "籍贯"], ["residence", "现居城市"], ["address", "通讯地址"], ["gradDate", "毕业时间"], ["targetCities", "期望城市"], ["availableDate", "可入职时间"]];
+const EDU = [["school", "学校"], ["college", "院系"], ["major", "专业"], ["degree", "学历/学位"], ["start", "开始"], ["end", "结束"], ["gpa", "GPA/成绩"], ["rank", "排名"], ["advisor", "导师"], ["thesis", "论文题目"]];
+V.profile = () => {
+  const p = S.d.profile || {}; const b = p.basic || {};
+  const edu = p.education && p.education.length ? p.education : [{}];
+  const qa = p.qa && p.qa.length ? p.qa : [{}];
+  return `<div class="head"><div><h1>报名信息</h1><p class="sub">一键填表时用这里的资料。身份证号、银行卡、密码这类信息不在这里存，填表时也会跳过，由你手动填写。</p></div>
+    <div class="row">${S.profileDirty ? `<span class="pill warn">有未保存的修改</span>` : ""}<button class="btn" data-act="profileFromResume" ${S.d.resumes.length ? "" : "disabled"}>从简历提取</button><button class="btn primary" data-act="saveProfile">保存</button></div></div>
+  <form id="pf" class="stack" data-input="pdirty">
+    <section class="sheet"><h2>基本信息</h2><div class="fields">${BASIC.map(([k, l]) => `<label class="f"><span>${l}</span><input type="text" id="b-${k}" name="b.${k}" value="${esc(b[k] || "")}"></label>`).join("")}</div></section>
+    <section class="sheet"><div class="row" style="justify-content:space-between"><h2>教育经历</h2><button type="button" class="btn sm" data-act="addEdu">添加一段</button></div>
+      ${edu.map((e, i) => `<div class="fields" style="padding:12px 0;border-bottom:1px dashed var(--line)">${EDU.map(([k, l]) => `<label class="f"><span>${l}</span><input type="text" id="e${i}-${k}" name="e.${i}.${k}" value="${esc(e[k] || "")}"></label>`).join("")}
+        <div class="row" style="align-items:flex-end"><button type="button" class="btn ghost sm danger" data-act="delEdu" data-i="${i}">删除这段</button></div></div>`).join("")}</section>
+    <section class="sheet"><h2>语言、技能、荣誉</h2><div class="grid3">
+      <label class="f"><span>语言（如 英语 IELTS 7.5）</span><textarea id="p-languages" name="languages">${esc(p.languages || "")}</textarea></label>
+      <label class="f"><span>技能 / 工具</span><textarea id="p-skills" name="skills">${esc(p.skills || "")}</textarea></label>
+      <label class="f"><span>获奖荣誉（一行一项）</span><textarea id="p-awards" name="awards">${esc(p.awards || "")}</textarea></label></div></section>
+    <section class="sheet"><h2>目标方向</h2><div class="row">${DIRS.map(d => `<label class="row note"><input type="checkbox" name="t" value="${esc(d)}" ${(p.targets || DIRS).includes(d) ? "checked" : ""}> ${esc(d)}</label>`).join("")}</div></section>
+    <section class="sheet"><div class="row" style="justify-content:space-between"><h2>常用问答</h2><button type="button" class="btn sm" data-act="addQA">添加</button></div>
+      <p class="note">网申里反复出现的问题，比如「自我评价」「为什么选择我们」「职业规划」。填表时会优先用这里的答案。</p>
+      ${qa.map((x, i) => `<div class="grid2" style="grid-template-columns:minmax(0,1fr) minmax(0,2fr);padding:8px 0;border-bottom:1px dashed var(--line)"><label class="f"><span>问题</span><input type="text" id="q${i}-q" name="q.${i}.q" value="${esc(x.q || "")}"></label><label class="f"><span>答案</span><textarea id="q${i}-a" name="q.${i}.a" style="min-height:60px">${esc(x.a || "")}</textarea></label></div>`).join("")}</section>
+  </form>`;
+};
+function readProfileForm() {
+  const f = $("#pf"); const p = { basic: {}, education: [], qa: [], targets: [] };
+  for (const el of f.querySelectorAll("[name]")) {
+    const n = el.name, v = (el.value || "").trim();
+    if (n === "t") { if (el.checked) p.targets.push(el.value); continue; }
+    const parts = n.split(".");
+    if (parts[0] === "b") p.basic[parts[1]] = v;
+    else if (parts[0] === "e") { (p.education[+parts[1]] = p.education[+parts[1]] || {})[parts[2]] = v; }
+    else if (parts[0] === "q") { (p.qa[+parts[1]] = p.qa[+parts[1]] || {})[parts[2]] = v; }
+    else p[n] = v;
+  }
+  p.education = p.education.filter(e => e && Object.values(e).some(Boolean));
+  p.qa = p.qa.filter(x => x && (x.q || x.a));
+  return p;
+}
+
+/* ---- 日程 ---- */
+V.calendar = () => {
+  const up = upcoming();
+  const past = [];
+  for (const a of S.d.applications) for (const ev of a.events || []) if (new Date(ev.start).getTime() < Date.now() - 2 * 36e5) past.push({ ...ev, app: a });
+  past.sort((x, y) => new Date(y.start) - new Date(x.start));
+  return `<div class="head"><div><h1>日程</h1><p class="sub">笔试、面试和测评时间。下载的是含 .ics 的压缩包（网页只能保存这类格式），解压后双击即可加入苹果日历，默认提前 1 天和 1 小时提醒。</p></div>
+    <button class="btn" data-act="icsAll" ${up.length ? "" : "disabled"}>导出全部未来日程</button></div>
+  <section class="sheet"><h2>即将到来</h2>${up.length ? `<div class="list">${up.map(evRow).join("")}</div>` : `<p class="note">没有未来的日程。</p>`}</section>
+  ${past.length ? `<section class="sheet" style="margin-top:16px"><h2>已结束</h2><div class="list">${past.slice(0, 20).map(evRow).join("")}</div></section>` : ""}`;
+};
+/* ============ application detail ============ */
+const APP_TABS = [["match", "匹配分析"], ["tailor", "定制简历"], ["fill", "辅助填表"], ["prep", "面试准备"], ["track", "进度与日程"]];
+function viewApp(a) {
+  const t = S.appTab;
+  return `<button class="back" data-act="closeApp">← 返回投递列表</button>
+  <div class="head" style="margin-top:8px"><div class="grow"><div class="eyebrow">${esc(a.category || a.nature || "投递")}</div><h1>${esc(a.company || "未命名公司")}</h1>
+    <p class="sub">${esc(posSummary(a))}${a.city ? " · " + esc(a.city) : ""}${a.url ? ` · <a href="${safeURL(a.url)}" target="_blank" rel="noopener">打开招聘页</a>` : ""}</p></div>
+    <div class="row"><select data-change="status" data-id="${a.id}" aria-label="投递状态" style="width:auto">${STATUSES.map(s => `<option ${s === (a.status || "待投递") ? "selected" : ""}>${s}</option>`).join("")}</select>
+    <button class="btn" data-act="editApp" data-id="${a.id}">编辑信息</button></div></div>
+  ${positionsPanel(a)}
+  ${extrasPanel(a)}
+  <div class="tabs" role="tablist">${APP_TABS.map(([k, l]) => `<button role="tab" data-act="appTab" data-t="${k}" aria-selected="${t === k}">${l}</button>`).join("")}</div>
+  ${({ match: tabMatch, tailor: tabTailor, fill: tabFill, prep: tabPrep, track: tabTrack }[t] || tabMatch)(a)}`;
+}
+function posSummary(a) {
+  const ps = a.positions || [];
+  if (!ps.length) return a.role || "岗位待确认";
+  return ps.map(p => [p.order, p.title, p.unit].filter(Boolean).join(" ")).join("；");
+}
+function positionsPanel(a) {
+  const ps = a.positions || [];
+  return `<section class="sheet" style="margin-bottom:16px"><div class="row" style="justify-content:space-between"><h2 style="margin:0">投递的岗位 <span class="note mono">${ps.length}</span></h2>${a.resumeNo ? `<span class="note">简历编号 <b class="mono">${esc(a.resumeNo)}</b></span>` : ""}${a.limit ? `<span class="note">${esc(a.limit)}</span>` : ""}</div>
+    ${ps.length ? `<div class="tbl-wrap" style="margin-top:8px"><table><thead><tr><th>志愿/类别</th><th>岗位</th><th>单位/分行</th><th>状态</th><th>投递时间</th><th></th></tr></thead><tbody>${ps.map(p => `<tr><td>${esc(p.order || "")}</td><td><div class="t1">${esc(p.title || "")}</div>${p.note ? `<div class="t2">${esc(p.note)}</div>` : ""}</td><td>${esc(p.unit || "")}${p.city ? `<div class="t2">${esc(p.city)}</div>` : ""}</td><td>${statusPill(p.status || a.status || "已投递")}</td><td class="mono">${esc((p.at || "").slice(0, 16).replace("T", " "))}</td><td><button class="btn ghost sm danger" data-act="delPos" data-app="${a.id}" data-x="${p.id}">删除</button></td></tr>`).join("")}</tbody></table></div>` : `<p class="note" style="margin-top:6px">还没记录具体岗位。</p>`}
+    <div class="grid2" style="margin-top:8px;gap:8px"><label class="f"><span>志愿/类别</span><input type="text" id="ps-o-${a.id}" placeholder="如 第1志愿、菁英管培生"></label><label class="f"><span>岗位名称</span><input type="text" id="ps-t-${a.id}" placeholder="如 综合类"></label>
+    <label class="f"><span>单位/分行</span><input type="text" id="ps-u-${a.id}" placeholder="如 总行"></label><label class="f"><span>备注</span><input type="text" id="ps-n-${a.id}" placeholder="可留空"></label></div>
+    <div class="row" style="margin-top:8px"><button class="btn sm" data-act="addPos" data-id="${a.id}">添加岗位</button></div></section>`;
+}
+function extrasPanel(a) {
+  const xs = a.extras || [];
+  return `<section class="sheet" style="margin-bottom:16px"><div class="row" style="justify-content:space-between"><h2 style="margin:0">我补充的关键信息 <span class="note mono">${xs.length}</span></h2><span class="note">匹配分析、定制简历、面试准备、填表都会参考这里，优先级高于网页抓取的 JD</span></div>
+    ${xs.length ? `<div class="list" style="margin-top:8px">${xs.map((x, i) => `<div class="li"><span class="date-tag">${esc((x.at || "").slice(5, 10).replace("-", "/"))}</span><div class="grow" style="white-space:pre-wrap">${esc(x.text.length > 600 ? x.text.slice(0, 600) + "…" : x.text)}</div><button class="btn ghost sm danger" data-act="delExtra" data-app="${a.id}" data-x="${x.id}">删除</button></div>`).join("")}</div>` : ""}
+    <label class="f" style="margin-top:8px"><span>粘贴补充（面经、宣讲会要点、HR 说的话、岗位内部信息、你自己的判断……随时可以加）</span><textarea id="ex-${a.id}" style="min-height:70px"></textarea></label>
+    <div class="row" style="margin-top:8px"><button class="btn primary sm" data-act="addExtra" data-id="${a.id}">添加补充</button>${a.match ? `<span class="note">加完后可在「匹配分析」里点「重新分析」</span>` : ""}</div></section>`;
+}
+function gauge(score) {
+  const r = 46, c = 2 * Math.PI * r, v = Math.max(0, Math.min(100, score)) / 100;
+  const col = score >= 75 ? "var(--ok)" : score >= 55 ? "var(--warn)" : "var(--bad)";
+  return `<svg class="gauge" viewBox="0 0 108 108" role="img" aria-label="匹配度 ${score}"><circle cx="54" cy="54" r="${r}" fill="none" stroke="var(--sunk)" stroke-width="9"/>
+  <circle cx="54" cy="54" r="${r}" fill="none" stroke="${col}" stroke-width="9" stroke-linecap="round" stroke-dasharray="${c * v} ${c}" transform="rotate(-90 54 54)"/>
+  <text x="54" y="60" text-anchor="middle" font-family="IBM Plex Mono, monospace" font-size="26" fill="var(--ink)">${score}</text></svg>`;
+}
+function tabMatch(a) {
+  const m = a.match; const busy = S.busy["match-" + a.id];
+  const jdBox = `<section class="sheet"><div class="row" style="justify-content:space-between"><h2>岗位描述（JD）</h2><div class="row">
+      ${S.hostOK && a.url ? `<button class="btn sm" data-act="fetchJD" data-id="${a.id}">${S.busy["jd-" + a.id] ? `<span class="spin"></span> 读取中` : "从招聘页读取"}</button>` : ""}
+      <button class="btn sm" data-act="saveJD" data-id="${a.id}">保存 JD</button></div></div>
+    <textarea id="jd-${a.id}" style="min-height:160px" placeholder="把岗位职责和任职要求粘贴到这里${S.hostOK ? "，或点「从招聘页读取」" : ""}">${esc(a.jd || "")}</textarea></section>`;
+  const runBtn = `<button class="btn primary" data-act="runMatch" data-id="${a.id}" ${busy ? "disabled" : ""}>${busy ? `<span class="spin"></span> 分析中…` : m ? "重新分析" : "分析匹配度"}</button>`;
+  if (!m) return `<div class="stack">${jdBox}<div class="empty"><h3>还没有匹配分析</h3><p>${S.d.experiences.length ? "有了 JD 后，AI 会对照你的经历库打分，列出优势、短板和最该突出的经历。" : "先到「简历与经历」上传简历并整理经历库，匹配分析才有依据。"}</p><div style="margin-top:10px">${runBtn}</div></div></div>`;
+  const exps = (m.recommend || []).map(r => ({ ...r, e: byId("experiences", r.expId) })).filter(r => r.e);
+  return `<div class="stack">
+  <section class="sheet"><div class="row" style="gap:20px;align-items:center">${gauge(m.score)}<div class="grow"><div class="eyebrow">匹配度 · ${esc((m.at || "").slice(0, 10))}</div><h2 style="margin-top:4px">${esc(m.verdict || "")}</h2>
+    <div class="grid2" style="gap:8px 20px">${(m.dims || []).map(d => `<div><div class="row" style="justify-content:space-between"><span>${esc(d.name)}</span><span class="score ${scoreCls(d.score)}">${d.score}</span></div><div class="bar"><i style="width:${Math.max(0, Math.min(100, d.score))}%"></i></div>${d.note ? `<div class="note">${esc(d.note)}</div>` : ""}</div>`).join("")}</div></div>${runBtn}</div></section>
+  ${(m.hardChecks || []).length ? `<section class="sheet"><h2>硬性条件核对</h2><div class="list">${m.hardChecks.map(h => `<div class="li"><span class="pill ${h.status === "满足" ? "ok" : h.status === "不满足" ? "bad" : "warn"}">${esc(h.status)}</span><div class="grow"><b>${esc(h.item)}</b>${h.note ? `<div class="note">${esc(h.note)}</div>` : ""}</div></div>`).join("")}</div></section>` : ""}
+  <div class="grid2"><section class="sheet"><h2>优势</h2>${md((m.strengths || []).map(s => "- " + s).join("\n"))}</section><section class="sheet"><h2>短板与对策</h2>${md((m.gaps || []).map(s => "- " + s).join("\n"))}</section></div>
+  <section class="sheet"><h2>建议突出的经历</h2>${exps.length ? `<div class="list">${exps.map(r => `<div class="li"><div class="grow"><b>${esc(r.e.org)}</b> · ${esc(r.e.role || "")}<div class="note">${esc(r.reason)}</div></div></div>`).join("")}</div>` : `<p class="note">没有特别推荐的经历。</p>`}
+    ${(m.keywords || []).length ? `<div class="row" style="margin-top:10px">${m.keywords.map(k => `<span class="pill acc">${esc(k)}</span>`).join("")}</div>` : ""}
+    <div style="margin-top:12px"><button class="btn" data-act="appTab" data-t="tailor">用这些经历生成定制简历 →</button></div></section>
+  ${jdBox}</div>`;
+}
+
+/* ---- tailored resume ---- */
+function lcsDiff(a, b) {
+  a = [...a]; b = [...b];
+  if (a.length * b.length > 250000) return `<del>${esc(a.join(""))}</del><br><ins>${esc(b.join(""))}</ins>`;
+  const n = a.length, m = b.length, dp = Array.from({ length: n + 1 }, () => new Uint16Array(m + 1));
+  for (let i = n - 1; i >= 0; i--) for (let j = m - 1; j >= 0; j--) dp[i][j] = a[i] === b[j] ? dp[i + 1][j + 1] + 1 : Math.max(dp[i + 1][j], dp[i][j + 1]);
+  let i = 0, j = 0, out = "", buf = "", mode = "";
+  const flush = () => { if (!buf) return; out += mode === "d" ? `<del>${esc(buf)}</del>` : mode === "i" ? `<ins>${esc(buf)}</ins>` : esc(buf); buf = ""; };
+  const push = (md, ch) => { if (md !== mode) { flush(); mode = md; } buf += ch; };
+  while (i < n && j < m) { if (a[i] === b[j]) { push("", a[i]); i++; j++; } else if (dp[i + 1][j] >= dp[i][j + 1]) { push("d", a[i]); i++; } else { push("i", b[j]); j++; } }
+  while (i < n) push("d", a[i++]); while (j < m) push("i", b[j++]); flush();
+  return out;
+}
+function tailoredDoc(a) { return S.d.tailored.find(t => t.id === a.id); }
+function tabTailor(a) {
+  const td = tailoredDoc(a); const busy = S.busy["tailor-" + a.id];
+  const rec = new Set(((a.match || {}).recommend || []).map(r => r.expId));
+  const sel = S.tailorSel[a.id] || (td && td.expIds) || (rec.size ? [...rec] : S.d.experiences.map(e => e.id));
+  S.tailorSel[a.id] = sel;
+  const picker = `<section class="sheet"><h2>选择这次要用的经历</h2><p class="note">参考 JobHuntBot 的做法：每次投递挑 2–4 段最相关的经历重点写。${rec.size ? "已按匹配分析预选。" : ""}</p>
+    <div class="list">${S.d.experiences.map(e => `<label class="li" style="cursor:pointer"><input type="checkbox" data-change="tsel" data-app="${a.id}" value="${e.id}" ${sel.includes(e.id) ? "checked" : ""}><div class="grow"><b>${esc(e.org)}</b> · ${esc(e.role || "")} <span class="note">${esc(EXP_TYPES[e.type] || "")}</span>${rec.has(e.id) ? ` <span class="pill acc">推荐</span>` : ""}</div></label>`).join("")}</div>
+    <div class="row" style="margin-top:12px"><button class="btn primary" data-act="runTailor" data-id="${a.id}" ${busy || (!a.jd && !extrasText(a)) ? "disabled" : ""}>${busy ? `<span class="spin"></span> 改写中…` : td ? "重新生成" : "生成定制版"}</button>${a.jd || extrasText(a) ? "" : `<span class="note">先补上 JD 或关键信息。</span>`}</div></section>`;
+  if (!S.d.experiences.length) return `<div class="empty"><h3>经历库是空的</h3><p>先上传简历并整理经历库。</p></div>`;
+  if (!td) return `<div class="stack">${picker}<div class="callout info">改写只调整措辞、顺序和关键词，不增删事实，时间、机构、数字一律不变。每一处改动都会标出原文、新文和原因，你可以逐条接受或还原。</div></div>`;
+  const acc = td.accepted || {};
+  let changed = 0, total = 0;
+  const items = (td.items || []).map(it => {
+    const e = byId("experiences", it.expId); if (!e) return "";
+    return `<div style="margin-top:14px"><h3>${esc(e.org)} · ${esc(e.role || "")} <span class="note mono">${esc(e.start || "")}–${esc(e.end || "")}</span></h3>
+    ${(it.bullets || []).map(bl => { const orig = (e.bullets || [])[bl.i]; if (orig === undefined) return ""; total++; const isCh = bl.changed && bl.new && bl.new !== orig; if (isCh) changed++; const key = it.expId + ":" + bl.i; const on = isCh && acc[key] !== false;
+      return `<div class="bullet">${isCh ? `<input type="checkbox" aria-label="接受这处改动" data-change="tacc" data-app="${a.id}" data-k="${key}" ${on ? "checked" : ""}>` : `<span class="pill">未改</span>`}
+        <div>${isCh ? `<div class="diff">${lcsDiff(orig, bl.new)}</div><div class="why">${esc(bl.reason || "")}</div>${on ? "" : `<div class="note">已还原为原文</div>`}` : `<div>${esc(orig)}</div>`}</div></div>`; }).join("")}</div>`;
+  }).join("");
+  return `<div class="stack">
+  <section class="sheet"><div class="row" style="justify-content:space-between"><div><h2>定制版 · ${esc(a.company)}</h2><p class="note">${total} 条要点中改动了 ${changed} 条。绿色是新增的措辞，红色是删去的措辞；取消勾选即还原原文。</p></div>
+    <div class="row"><button class="btn" data-act="exportMd" data-id="${a.id}">导出 Markdown</button><button class="btn primary" data-act="exportDocx" data-id="${a.id}">导出 Word</button></div></div>
+    ${td.notes ? `<div class="callout info" style="margin-top:8px">${esc(td.notes)}</div>` : ""}
+    ${td.summary && td.summary.text ? `<div style="margin-top:14px"><h3>个人概述（新增）</h3><p style="margin:0">${esc(td.summary.text)}</p><div class="why">${esc(td.summary.reason || "")}</div></div>` : ""}
+    ${items}</section>${picker}</div>`;
+}
+function tailoredContent(a) {
+  const td = tailoredDoc(a); const acc = (td && td.accepted) || {};
+  const ids = (td && td.items ? td.items.map(i => i.expId) : S.d.experiences.map(e => e.id));
+  return ids.map(id => byId("experiences", id)).filter(Boolean).map(e => {
+    const it = td && (td.items || []).find(x => x.expId === e.id);
+    const bullets = (e.bullets || []).map((b, i) => { const bl = it && (it.bullets || []).find(x => x.i === i); const key = e.id + ":" + i; return bl && bl.changed && bl.new && acc[key] !== false ? bl.new : b; });
+    return { e, bullets };
+  });
+}
+
+/* ---- fill ---- */
+function tabFill(a) {
+  const k = "fill-" + a.id; const st = S.fill && S.fill.app === a.id ? S.fill : null;
+  if (S.local) return localFill(a);
+  if (!S.hostOK) return `<div class="empty"><h3>需要在 Claude 桌面 App 里使用</h3><p>一键填表通过 App 自带的内置浏览器完成。请在 Claude 桌面 App 中打开这个页面；在手机或普通浏览器里这个功能不可用。<br>也可以直接在对话里对 Claude 说「帮我填 ${esc(a.company)} 的网申」。</p></div>`;
+  return `<div class="stack">
+  <section class="sheet"><h2>怎么用</h2><ol style="margin:0;padding-left:20px">
+    <li>点「打开招聘页」，内置浏览器会在 App 侧边打开 ${a.url ? "这条投递的网址" : "你填写的网址"}。需要登录的网申系统，请先在那里手动登录。</li>
+    <li>翻到要填的那一页表单，回到这里点「读取并匹配当前页」。</li>
+    <li>核对下面列出的每一项，确认后点「写入表单」。多页表单每页重复第 2–3 步。</li>
+    <li>提交按钮永远由你自己点。</li></ol>
+    <div class="row" style="margin-top:12px"><input type="url" id="fill-url" value="${esc(a.url || "")}" placeholder="网申页面网址" class="grow" style="max-width:420px">
+      <button class="btn" data-act="fillOpen" data-id="${a.id}">打开招聘页</button>
+      <button class="btn primary" data-act="fillScan" data-id="${a.id}" ${S.busy[k] ? "disabled" : ""}>${S.busy[k] === "scan" ? `<span class="spin"></span> 读取中…` : "读取并匹配当前页"}</button></div>
+    ${(S.logs[k] || []).length ? `<div class="log" id="log-${k}" style="margin-top:10px">${esc(S.logs[k].join("\n"))}</div>` : `<div class="log" id="log-${k}" hidden></div>`}</section>
+  ${st && st.fills ? `<section class="sheet"><div class="row" style="justify-content:space-between"><h2>准备写入 ${st.fills.filter(f => f.on).length} 项</h2>
+     <button class="btn primary" data-act="fillApply" data-id="${a.id}" ${S.busy[k] ? "disabled" : ""}>${S.busy[k] === "apply" ? `<span class="spin"></span> 写入中…` : "写入表单"}</button></div>
+     <div class="list">${st.fills.map((f, i) => `<label class="li"><input type="checkbox" data-change="fillOn" data-i="${i}" ${f.on ? "checked" : ""}><div class="grow"><b>${esc(f.label)}</b> <span class="note mono">${esc(f.ref)}</span><div>${esc(f.value)}</div>${f.done ? `<span class="pill ${f.done === "ok" ? "ok" : "bad"}">${f.done === "ok" ? "已写入" : esc(f.done)}</span>` : ""}</div></label>`).join("")}</div>
+     ${(st.skipped || []).length ? `<h3 style="margin-top:14px">需要你自己填的</h3><div class="list">${st.skipped.map(s => `<div class="li"><div class="grow"><b>${esc(s.label)}</b><div class="note">${esc(s.reason)}</div></div></div>`).join("")}</div>` : ""}</section>` : ""}
+  </div>`;
+}
+
+/* ---- interview prep ---- */
+function tabPrep(a) {
+  const an = S.d.analyses.find(x => x.id === a.id); const k = "prep-" + a.id; const busy = S.busy[k];
+  const queued = S.d.queue.find(q => q.applicationId === a.id && q.type === "deep" && q.status !== "done");
+  const controls = S.local ? `<div class="row"><button class="btn primary" data-act="runDeep" data-id="${a.id}" ${busy || S.aiStatus?.provider !== "codex" ? "disabled" : ""}>${busy ? "Codex 分析中…" : an ? "重新联网分析" : "用 Codex 联网分析"}</button></div><p class="note">使用公开网页和你保存的经历准备面试，请核对事实与信息来源。需要已登录且网络可用的 Codex。</p><div class="log" id="log-${k}" ${(S.logs[k] || []).length ? "" : "hidden"}>${esc((S.logs[k] || []).join("\n"))}</div>` : `<div class="row"><button class="btn" data-act="runDeep" data-id="${a.id}" ${busy ? "disabled" : ""}>深度分析</button></div>`;
+  if (!an) return `<div class="stack"><section class="sheet"><h2>面试深度分析</h2><p class="note">结合你的经历、这家公司和这个岗位，生成：1 分钟和 3 分钟自我介绍、行业现状、业务方向、竞品对比、岗位解读、12–18 个预测问题及答题要点、反问清单，并附上信息来源。</p>${controls}</section></div>`;
+  const s = an;
+  return `<div class="stack"><section class="sheet"><div class="row" style="justify-content:space-between"><div><div class="eyebrow">${s.by === "codex" ? "Codex 联网分析" : s.by === "claude" ? "Claude 联网分析" : "本页内置浏览器分析"} · ${esc((s.at || "").slice(0, 16).replace("T", " "))}</div><h2 style="margin-top:4px">面试准备 · ${esc(a.company)}</h2></div></div>${controls}</section>
+  <div class="grid2"><section class="sheet"><h2>1 分钟自我介绍</h2>${md(s.intro1)}</section><section class="sheet"><h2>3 分钟自我介绍</h2>${md(s.intro3)}</section></div>
+  ${s.introEn ? `<section class="sheet"><h2>英文自我介绍</h2>${md(s.introEn)}</section>` : ""}
+  <div class="grid2"><section class="sheet"><h2>行业现状</h2>${md(s.industry)}</section><section class="sheet"><h2>业务方向与近期动态</h2>${md(s.business)}</section></div>
+  <div class="grid2"><section class="sheet"><h2>竞品 / 同类机构对比</h2>${(s.competitors || []).length ? `<div class="list">${s.competitors.map(c => `<div class="li"><div class="grow"><b>${esc(c.name)}</b><div>${esc(c.compare)}</div></div></div>`).join("")}</div>` : `<p class="note">未查到。</p>`}</section><section class="sheet"><h2>岗位解读</h2>${md(s.role)}</section></div>
+  <section class="sheet"><h2>预测面试问题 <span class="note mono">${(s.questions || []).length}</span></h2>${(s.questions || []).map(q => `<details class="q"><summary>${esc(q.q)} <span class="pill">${esc(q.type || "")}</span></summary><div class="note" style="margin-top:6px">考察：${esc(q.intent || "")}</div>${md(q.hint)}</details>`).join("")}</section>
+  ${(s.ask || []).length ? `<section class="sheet"><h2>可以反问的问题</h2>${md(s.ask.map(x => "- " + x).join("\n"))}</section>` : ""}
+  ${(s.sources || []).length ? `<section class="sheet"><h2>信息来源</h2><ul style="margin:0;padding-left:18px">${s.sources.map(x => `<li><a href="${safeURL(x.url)}" target="_blank" rel="noopener">${esc(x.title || x.url)}</a></li>`).join("")}</ul></section>` : ""}
+  </div>`;
+}
+
+/* ---- track ---- */
+function tabTrack(a) {
+  const evs = (a.events || []).slice().sort((x, y) => new Date(x.start) - new Date(y.start));
+  return `<div class="grid2"><section class="sheet"><div class="row" style="justify-content:space-between"><h2>日程</h2><button class="btn sm" data-act="schedule" data-id="${a.id}">添加笔试/面试</button></div>
+    ${evs.length ? `<div class="list">${evs.map(ev => `<div class="li"><div class="date-tag"><b>${new Date(ev.start).getMonth() + 1}/${new Date(ev.start).getDate()}</b>${hm(new Date(ev.start))}</div><div class="grow"><b>${esc(ev.type)}</b><div class="note">${esc(ev.location || "")}</div>${ev.note ? `<div class="note">${esc(ev.note)}</div>` : ""}</div><button class="btn sm" data-act="ics1" data-app="${a.id}" data-ev="${ev.id}">日历文件</button><button class="btn ghost sm danger" data-act="delEv" data-app="${a.id}" data-ev="${ev.id}">删除</button></div>`).join("")}</div>` : `<p class="note">还没有日程。</p>`}</section>
+  <section class="sheet"><h2>状态记录</h2>${(a.history || []).length ? `<div class="list">${a.history.slice().reverse().map(h => `<div class="li"><span class="date-tag">${esc((h.at || "").slice(0, 10))}</span><div class="grow">${statusPill(h.status)}</div></div>`).join("")}</div>` : `<p class="note">状态变化会记录在这里。</p>`}
+    <label class="f" style="margin-top:12px"><span>备注</span><textarea id="notes-${a.id}">${esc(a.notes || "")}</textarea></label><div style="margin-top:8px"><button class="btn sm" data-act="saveNotes" data-id="${a.id}">保存备注</button></div></section></div>`;
+}
+
+/* ============ modals ============ */
+function modal(html, wide) { $("#modal").innerHTML = `<div class="modal-bg" data-act="modalBg"><div class="modal ${wide ? "wide" : ""}" role="dialog" aria-modal="true">${html}</div></div>`; const f = $("#modal input,#modal textarea,#modal select"); if (f) f.focus(); }
+function closeModal() { $("#modal").innerHTML = ""; S.sched = null; }
+function newAppModal(pre = {}) {
+  modal(`<h2>新增投递</h2>
+  <label class="f"><span>招聘网址（官网岗位页或网申入口）</span><input type="url" id="na-url" value="${esc(pre.url || "")}" placeholder="https://"></label>
+  <div class="fields"><label class="f"><span>公司</span><input type="text" id="na-co" value="${esc(pre.company || "")}" placeholder="可留空，自动识别"></label>
+  <label class="f"><span>岗位</span><input type="text" id="na-role" value="${esc(pre.role || "")}" placeholder="可留空，自动识别"></label></div>
+  <label class="f"><span>岗位描述（可选）</span><textarea id="na-jd" placeholder="${S.hostOK ? "留空的话，会用内置浏览器打开网址自动读取" : "把岗位职责和任职要求粘贴到这里，用于匹配分析"}"></textarea></label>
+  <label class="row note"><input type="checkbox" id="na-run" checked> 创建后立即分析匹配度</label>
+  <div class="row" style="justify-content:flex-end"><button class="btn ghost" data-act="closeModal">取消</button><button class="btn primary" data-act="createApp" data-co="${esc(pre.companyId || "")}">创建</button></div>`);
+}
+function expModal(e = {}) {
+  modal(`<h2>${e.id ? "编辑经历" : "添加经历"}</h2>
+  <div class="fields"><label class="f"><span>类型</span><select id="x-type">${Object.entries(EXP_TYPES).map(([k, v]) => `<option value="${k}" ${e.type === k ? "selected" : ""}>${v}</option>`).join("")}</select></label>
+  <label class="f"><span>机构</span><input type="text" id="x-org" value="${esc(e.org || "")}"></label><label class="f"><span>角色/职位</span><input type="text" id="x-role" value="${esc(e.role || "")}"></label>
+  <label class="f"><span>开始（如 2024-07）</span><input type="text" id="x-start" value="${esc(e.start || "")}"></label><label class="f"><span>结束（至今可写「至今」）</span><input type="text" id="x-end" value="${esc(e.end || "")}"></label>
+  <label class="f"><span>地点</span><input type="text" id="x-loc" value="${esc(e.location || "")}"></label></div>
+  <label class="f"><span>要点（一行一条）</span><textarea id="x-bullets" style="min-height:140px">${esc((e.bullets || []).join("\n"))}</textarea></label>
+  <div class="row">${DIRS.map(d => `<label class="row note"><input type="checkbox" name="x-tag" value="${esc(d)}" ${(e.tags || []).includes(d) ? "checked" : ""}> ${esc(d)}</label>`).join("")}</div>
+  <div class="row" style="justify-content:space-between">${e.id ? `<button class="btn danger" data-act="delExp" data-id="${e.id}">删除这段经历</button>` : "<span></span>"}<div class="row"><button class="btn ghost" data-act="closeModal">取消</button><button class="btn primary" data-act="saveExp" data-id="${e.id || ""}">保存</button></div></div>`, true);
+}
+const CO_FIELDS = [["name", "公司"], ["category", "方向"], ["industry", "行业"], ["nature", "性质"], ["batch", "批次"], ["roles", "岗位"], ["cities", "城市"], ["openDate", "开放日期"], ["deadline", "截止日期 (YYYY-MM-DD)"], ["url", "投递链接"], ["notes", "备注"]];
+function coModal(c = {}) {
+  modal(`<h2>${c.id ? "编辑公司" : "添加公司"}</h2><div class="fields">${CO_FIELDS.map(([k, l]) => k === "category"
+    ? `<label class="f"><span>${l}</span><select id="co-${k}"><option value="">未分类</option>${DIRS.map(d => `<option ${c.category === d ? "selected" : ""}>${esc(d)}</option>`).join("")}</select></label>`
+    : `<label class="f"><span>${l}</span><input type="text" id="co-${k}" value="${esc(c[k] || "")}"></label>`).join("")}</div>
+  <div class="row" style="justify-content:space-between">${c.id ? `<button class="btn danger" data-act="delCo" data-id="${c.id}">从公司库删除</button>` : "<span></span>"}<div class="row"><button class="btn ghost" data-act="closeModal">取消</button><button class="btn primary" data-act="saveCo" data-id="${c.id || ""}">保存</button></div></div>`, true);
+}
+function scheduleModal(a, stage) {
+  S.sched = { app: a.id, stage: stage || a.status, slots: [], pick: -1, location: "", note: "" };
+  drawSchedule();
+}
+function drawSchedule() {
+  const s = S.sched; const a = appById(s.app); if (!a) return;
+  modal(`<h2>${esc(a.company)} · ${esc(s.stage)}时间</h2>
+  <label class="f"><span>粘贴通知邮件或短信（可选）</span><textarea id="sc-text" placeholder="把笔试/面试通知原文贴进来，AI 会识别其中的可选时间"></textarea></label>
+  <div class="row"><button class="btn" data-act="scParse" ${S.busy.sc ? "disabled" : ""}>${S.busy.sc ? `<span class="spin"></span> 识别中` : "识别时间"}</button></div>
+  ${s.slots.length ? `<div class="list">${s.slots.map((x, i) => `<label class="li" style="cursor:pointer"><input type="radio" name="sc-pick" data-change="scPick" value="${i}" ${s.pick === i ? "checked" : ""}><div class="grow"><b class="mono">${esc(x.start.replace("T", " "))}${x.end ? " – " + esc(x.end.slice(11)) : ""}</b><div class="note">${esc(x.label || "")}</div></div></label>`).join("")}</div>` : ""}
+  <div class="fields"><label class="f"><span>或手动填写开始时间</span><input type="datetime-local" id="sc-start"></label><label class="f"><span>时长（分钟）</span><input type="number" id="sc-mins" value="60" min="10" step="10"></label></div>
+  <label class="f"><span>地点 / 会议链接</span><input type="text" id="sc-loc" value="${esc(s.location)}"></label>
+  <label class="f"><span>备注（携带材料、平台、着装等）</span><input type="text" id="sc-note" value="${esc(s.note)}"></label>
+  <div class="row" style="justify-content:flex-end"><button class="btn ghost" data-act="closeModal">稍后再说</button><button class="btn" data-act="scSave" data-dl="0">只保存</button><button class="btn primary" data-act="scSave" data-dl="1">保存并下载日历文件</button></div>`);
+}
+/* Standalone runtime: the same views work without Claude Artifact. */
+async function api(path, body, signal) {
+  if (S.github) return S.github.request(path, body, signal);
+  const response = await fetch(path, {
+    ...(body === undefined ? {} : { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) }),
+    cache: "no-store", signal,
+  });
+  let result;
+  try { result = await response.json(); } catch (_) { throw new Error("服务返回异常，请确认使用工作台服务启动页面。"); }
+  if (!response.ok) throw new Error(result.error || "请求失败，请重试。");
+  return result;
+}
+
+function localDatabase(initial) {
+  let docs = initial;
+  const listeners = new Set();
+  const snapshot = path => ({ exists: Object.hasOwn(docs, path), data: () => structuredClone(docs[path]) });
+  function notify() { for (const f of listeners) f(); }
+  async function write(operation, path, data = {}) {
+    await api("/api/document", { operation, path, data });
+    // Refetch the committed state. Never show an unacknowledged write as saved.
+    await refresh();
+  }
+  async function refresh() {
+    const result = await api("/api/state");
+    if (JSON.stringify(result.documents) !== JSON.stringify(docs)) { docs = result.documents; notify(); }
+  }
+  return {
+    refresh,
+    collection(name) { return { onSnapshot(fn) {
+      const emit = () => fn({ docs: Object.keys(docs).filter(p => p.startsWith(name + "/")).map(p => ({ id: p.split("/")[1], data: () => structuredClone(docs[p]) })) });
+      listeners.add(emit); emit(); return () => listeners.delete(emit);
+    } }; },
+    doc(path) { return {
+      set: data => write("set", path, data), update: data => write("update", path, data), delete: () => write("delete", path),
+      onSnapshot(fn) { const emit = () => fn(snapshot(path)); listeners.add(emit); emit(); return () => listeners.delete(emit); },
+    }; },
+  };
+}
+
+async function imageData(image) {
+  if (typeof image === "string") return image;
+  return new Promise((resolve, reject) => { const r = new FileReader(); r.onload = () => resolve(r.result); r.onerror = () => reject(new Error("无法读取图片。")); r.readAsDataURL(image); });
+}
+
+function localSample() {
+  async function call(prompt, opts = {}, text = false) {
+    const input = opts.images ? (Array.isArray(opts.images) ? opts.images : [opts.images]) : [];
+    try {
+      const result = await api("/api/ai", { prompt, text, images: await Promise.all(input.map(imageData)), search: !!opts.tools }, opts.signal);
+      S.aiStatus.lastResult = "ok";
+      return result;
+    } catch (error) { S.aiStatus.lastResult = "error"; throw error; }
+  }
+  const sample = (prompt, opts) => call(prompt, opts, true);
+  sample.json = (prompt, opts) => call(prompt, opts);
+  sample.limits = async () => ({ images: { maxCount: 5 } });
+  return sample;
+}
+
+async function browserDownload({ filename, data, archived = false }) {
+  const blob = data instanceof Blob ? data : new Blob([data], { type: "application/octet-stream" });
+  if (S.github && !archived && !filename.startsWith("求职工作台备份")) await archiveFile(new File([blob], filename, { type: blob.type }));
+  const url = URL.createObjectURL(blob); const a = document.createElement("a");
+  a.href = url; a.download = filename; document.body.append(a); a.click(); a.remove();
+  setTimeout(() => URL.revokeObjectURL(url), 30000);
+}
+
+async function localBoot() {
+  S.local = true;
+  const base = new URL("vendor/", location.href);
+  Object.assign(LIBS, { pdf: new URL("pdf.min.js", base).href, pdfw: new URL("pdf.worker.min.js", base).href, mammoth: new URL("mammoth.browser.min.js", base).href, xlsx: new URL("xlsx.full.min.js", base).href, docx: new URL("docx.umd.js", base).href });
+  try {
+    const [state, status] = await Promise.all([api("/api/state"), api("/api/status")]);
+    S.db = localDatabase(state.documents); S.sample = localSample(); S.dl = { save: browserDownload };
+    S.aiStatus = status.ai; S.hostOK = false;
+    subscribe(); S.ready = true; render();
+    setInterval(() => { if (document.visibilityState === "visible") S.db.refresh().catch(() => {}); }, S.github ? 60000 : 5000);
+  } catch (error) {
+    if (!S.github) githubLogin();
+    else { S.fatal = "无法读取私人仓库，请检查权限后刷新重试。"; render(); }
+  }
+}
+
+function localRail() {
+  const ai = S.aiStatus || {};
+  const state = ai.lastResult === "ok" ? "已连通" : ai.lastResult === "error" ? "连接失败" : "待测试";
+  return `<div><span class="dot ${ai.lastResult === "ok" ? "on" : "off"}"></span>${esc(ai.provider === "github" ? "GitHub Models" : ai.provider === "openai" ? "OpenAI" : "Codex")} · ${state}</div>
+    <button class="btn sm" data-act="localSettings">数据与 AI 设置</button>${S.github ? `<button class="btn sm" data-act="githubLogout">退出私人工作台</button>` : ""}`;
+}
+
+function localSettings() {
+  const status = S.aiStatus || {};
+  modal(`<h2>数据与 AI</h2><p>${S.github ? `所有记录与文件保存在私有仓库 ${esc(S.github.owner + "/" + S.github.repo)} 中，Git 提交历史保留修改版本。` : "数据保存在此服务器的 SQLite 数据库中，关闭网页后仍保留。更换服务器前请下载备份。"}</p>
+    <div class="row"><button class="btn" data-act="backupData">下载完整备份</button><button class="btn" data-act="restoreData">导入备份</button></div>
+    <p class="note">导入会合并记录，同 ID 的记录由备份覆盖；${S.github ? "导入前的记录保留在 GitHub 提交历史中。完整备份包含附件。" : "导入前会自动备份现有数据。服务器启动时也会备份，保留最近 30 份。"}</p>
+    <h3>AI：${esc(status.provider === "github" ? "GitHub Models" : status.provider === "openai" ? "OpenAI" : "Codex")}</h3>
+    <p class="note">${status.provider === "github" ? "使用当前 GitHub 令牌调用 GitHub Models，需要 Models 读取权限和可用额度。仅在点击 AI 功能时发送相关资料，不支持联网检索。" : status.provider === "openai" ? "由服务端环境变量配置接口，密钥不会发送到浏览器。此模式暂不支持联网分析。" : "使用服务端已登录的 Codex。首次使用请测试连接；连接失败时请检查登录状态及 chatgpt.com 网络访问。"}</p>
+    <div class="row"><button class="btn primary" data-act="testAI" ${S.busy.aiTest ? "disabled" : ""}>${S.busy.aiTest ? "测试中…" : "测试 AI 连接"}</button><button class="btn" data-act="closeModal">关闭</button></div>
+    <p id="ai-test-result" role="status"></p>`);
+}
+
+async function testAI() {
+  S.busy.aiTest = true; localSettings();
+  const target = $("#ai-test-result");
+  try {
+    const result = await S.sample.json('这是连接测试。仅输出 {"ok":true}。');
+    if (result.ok !== true) throw new Error("AI 返回不符合测试格式，请重试。");
+    target.textContent = "连接成功，可以使用 AI 整理简历和岗位分析。";
+  } catch (error) { target.textContent = errText(error); }
+  delete S.busy.aiTest;
+  const button = $('[data-act="testAI"]'); if (button) { button.disabled = false; button.textContent = "重新测试 AI 连接"; }
+  render();
+}
+
+async function restoreData() {
+  const input = document.createElement("input"); input.type = "file"; input.accept = ".json";
+  input.onchange = async () => {
+    try {
+      if (!input.files[0]) return;
+      const limit = S.github ? 256 : 24;
+      if (input.files[0].size > limit * 1024 * 1024) throw new Error(`备份文件不能超过 ${limit}MB。`);
+      const data = JSON.parse(await input.files[0].text());
+      if (!confirm("导入会合并数据，并覆盖同 ID 记录。导入前将自动备份现有数据，是否继续？")) return;
+      const result = await api("/api/restore", data);
+      await S.db.refresh(); closeModal(); toast(`已导入 ${result.count} 条记录。`);
+    } catch (error) { toast(errText(error), true); }
+  }; input.click();
+}
+
+async function localDeep(id) {
+  const a = appById(id); if (!a) return;
+  const k = "prep-" + id; S.logs[k] = []; setBusy(k, true);
+  try {
+    log(k, "AI 正在联网分析，通常需要几分钟。请保持页面打开。");
+    const result = await ai(deepPrompt(a), { tools: [{ name: "web_search" }] });
+    if (!result.intro1 || !Array.isArray(result.questions)) throw new Error("AI 分析不完整，请重试。");
+    await db.set("analyses/" + id, { ...result, by: "codex", at: new Date().toISOString() });
+    for (const q of S.d.queue.filter(q => q.applicationId === id && q.status !== "done")) await db.update("queue/" + q.id, { status: "done" });
+    log(k, "分析已保存。");
+  } catch (error) { log(k, "分析未完成：" + errText(error)); toast(errText(error), true); }
+  setBusy(k, false);
+}
+
+async function localJobs() {
+  setBusy("jobs", true);
+  try {
+    const r = await ai(`请联网寻找正在招聘的真实岗位，今天 ${today()}。候选人：${JSON.stringify(profileBrief())}。方向：${DIRS.join("、")}。
+最多列出 6 家匹配的单位，必须有可核验的官方招聘链接和明确的报名截止时间；查不到就返回空数组，不要编造。
+只输出 JSON：{"summary":"检索情况简述","companies":[{"name":"","category":"","roles":"","cities":"","batch":"","openDate":"YYYY-MM-DD","deadline":"YYYY-MM-DD","url":"https://官方招聘链接","notes":"信息来源与关键要求"}]}`, { tools: [{ name: "web_search" }] });
+    const rows = (r.companies || []).filter(c => c.name && /^https:\/\//.test(c.url || "") && /^\d{4}-\d{2}-\d{2}$/.test(c.deadline || ""));
+    const counts = await upsertCompanies(rows, "Codex");
+    await db.set("meta/status", { ...(S.d.meta || {}), lastDaily: new Date().toISOString(), dailySummary: r.summary || "检索完成，请核对官方原文。" });
+    toast(`检索完成：新增 ${counts.add} 家，更新 ${counts.upd} 家。请核对官方招聘信息。`);
+  } catch (error) { toast(errText(error), true); }
+  setBusy("jobs", false);
+}
+
+function localFill(a) {
+  const p = S.d.profile || {}; const b = p.basic || {};
+  const fields = [["姓名", b.name], ["手机", b.phone], ["邮箱", b.email], ["政治面貌", b.politics], ["毕业日期", b.gradDate],
+    ["教育经历", (p.education || []).map(e => [e.school, e.major, e.degree, e.start, e.end].filter(Boolean).join(" · ")).join("\n")],
+    ["语言", p.languages], ["技能", p.skills], ["获奖", p.awards]];
+  S.copyFields = fields;
+  return `<section class="sheet"><h2>报名资料速填</h2><p class="note">在招聘网站中手动核对并粘贴以下资料。跨网站自动填表暂不支持，最终保存和提交由你完成。</p>
+    ${a.url && /^https?:\/\//i.test(a.url) ? `<a class="btn" href="${safeURL(a.url)}" target="_blank" rel="noopener noreferrer">打开招聘页面</a>` : ""}
+    <div class="list">${fields.map(([label, value], i) => `<div class="li"><div class="grow"><b>${label}</b><div style="white-space:pre-wrap">${esc(value || "未填写，请先完善报名信息")}</div></div>${value ? `<button class="btn sm" data-act="copyField" data-i="${i}">复制</button>` : ""}</div>`).join("")}</div></section>`;
+}
+
+// CSV import works offline; Excel remains supported via the original parser.
+function parseCSV(text) {
+  const rows = []; let row = [], field = "", quoted = false;
+  text = text.replace(/^\uFEFF/, "");
+  for (let i = 0; i < text.length; i++) {
+    const c = text[i];
+    if (c === '"') { if (quoted && text[i + 1] === '"') { field += '"'; i++; } else quoted = !quoted; }
+    else if (c === ',' && !quoted) { row.push(field); field = ""; }
+    else if ((c === '\n' || c === '\r') && !quoted) {
+      if (c === '\r' && text[i + 1] === '\n') i++;
+      row.push(field); if (row.some(Boolean)) rows.push(row); row = []; field = "";
+    } else field += c;
+  }
+  if (quoted) throw new Error("CSV 引号未闭合，请检查文件格式。");
+  row.push(field); if (row.some(Boolean)) rows.push(row);
+  const headers = rows.shift() || [];
+  return rows.map(values => Object.fromEntries(headers.map((h, i) => [h, values[i] || ""])));
+}
+/* GitHub Pages runtime. Only a private repository may hold personal data. */
+const GITHUB_API = "https://api.github.com";
+const GITHUB_STATE = "workbench/state.json";
+
+function bytes64(bytes) {
+  let text = "";
+  for (let i = 0; i < bytes.length; i += 16384) text += String.fromCharCode(...bytes.subarray(i, i + 16384));
+  return btoa(text);
+}
+function unbase64(text) { return Uint8Array.from(atob(text.replace(/\s/g, "")), c => c.charCodeAt(0)); }
+
+class GitHubStorage {
+  constructor(owner, repo, token) {
+    this.owner = owner; this.repo = repo; this.token = token;
+    this.root = `/repos/${encodeURIComponent(owner)}/${encodeURIComponent(repo)}`;
+    this.queue = Promise.resolve(); this.documents = {}; this.fileURLs = [];
+  }
+  async github(path, options = {}) {
+    let response;
+    try {
+      response = await fetch(GITHUB_API + path, { ...options, cache: "no-store", headers: {
+        Accept: "application/vnd.github+json", "X-GitHub-Api-Version": "2022-11-28", Authorization: "Bearer " + this.token,
+        ...(options.body ? { "Content-Type": "application/json" } : {}), ...options.headers,
+      } });
+    } catch (_) { throw new Error("无法连接 GitHub，请检查网络后重试。未确认成功的操作不会显示为已保存。"); }
+    if (response.status === 404 && options.missingOK) return null;
+    let result = {}; try { result = await response.json(); } catch (_) {}
+    if (!response.ok) {
+      const error = new Error(response.status === 401 ? "GitHub 令牌无效或已过期，请退出后重新登录。" : response.status === 403 ? "GitHub 拒绝访问：请检查令牌的仓库 Contents 读写权限和请求额度。" : response.status === 404 ? "仓库或文件不存在，或令牌无权访问。" : `GitHub 操作失败（${response.status}），请稍后重试。`);
+      error.status = response.status; throw error;
+    }
+    return result;
+  }
+  async connect() {
+    const repo = await this.github(this.root);
+    if (repo.private !== true) throw new Error("数据仓库必须为 Private（私有）。为保护你的记录，工作台拒绝向公开仓库保存资料。");
+    if (repo.permissions && repo.permissions.push !== true) throw new Error("此令牌没有数据仓库的写入权限。");
+    await this.readState();
+  }
+  async file(path, missingOK = false) {
+    const value = await this.github(this.root + "/contents/" + path.split("/").map(encodeURIComponent).join("/"), { missingOK });
+    if (!value) return null;
+    if (typeof value.content === "string" && value.encoding === "base64") return { sha: value.sha, bytes: unbase64(value.content) };
+    if (!value.sha || Array.isArray(value)) throw new Error("数据仓库中的文件格式异常。");
+    const blob = await this.github(this.root + "/git/blobs/" + value.sha);
+    return { sha: value.sha, bytes: unbase64(blob.content) };
+  }
+  async readState() {
+    const file = await this.file(GITHUB_STATE, true);
+    if (!file) { this.documents = {}; return { documents: {}, sha: null }; }
+    let state;
+    try { state = JSON.parse(new TextDecoder().decode(file.bytes)); } catch (_) { throw new Error("云端数据文件无法解析。为避免覆盖记录，已停止保存，请先检查版本历史。"); }
+    if (!state || state.format !== "jobsearch-workbench-v1" || !state.documents || typeof state.documents !== "object" || Array.isArray(state.documents)) throw new Error("云端数据格式不正确，未执行覆盖。");
+    this.documents = state.documents;
+    return { documents: state.documents, sha: file.sha };
+  }
+  serial(task) {
+    const result = this.queue.then(task); this.queue = result.catch(() => {}); return result;
+  }
+  async changeDocuments(change) {
+    return this.serial(async () => {
+      for (let attempt = 0; attempt < 3; attempt++) {
+        const state = await this.readState(); const documents = structuredClone(state.documents);
+        change(documents);
+        const body = { message: "Save private workbench records", content: bytes64(new TextEncoder().encode(JSON.stringify({ format: "jobsearch-workbench-v1", documents }))), ...(state.sha ? { sha: state.sha } : {}) };
+        try {
+          await this.github(this.root + "/contents/" + GITHUB_STATE, { method: "PUT", body: JSON.stringify(body) });
+          this.documents = documents; return { ok: true };
+        } catch (error) { if (![409, 422].includes(error.status) || attempt === 2) throw error; }
+      }
+    });
+  }
+  async putFile(file, id = crypto.randomUUID().replace(/-/g, "")) {
+    if (!file.size || file.size > 15 * 1024 * 1024) throw new Error("单个文件需大于 0 且不超过 15MB。");
+    const path = "workbench/files/" + id;
+    const data = new Uint8Array(await file.arrayBuffer());
+    const existing = await this.file(path, true);
+    await this.serial(() => this.github(this.root + "/contents/" + path, { method: "PUT", body: JSON.stringify({ message: "Save private workbench attachment", content: bytes64(data), ...(existing ? { sha: existing.sha } : {}) }) }));
+    const metadata = { name: file.name, mime: file.type || "application/octet-stream", size: file.size, path, createdAt: new Date().toISOString() };
+    await this.changeDocuments(docs => { docs["attachments/" + id] = metadata; });
+    if (S.db) await S.db.refresh();
+    return { id, ...metadata };
+  }
+  async attachment(id) {
+    const metadata = this.documents["attachments/" + id];
+    if (!metadata || metadata.path !== "workbench/files/" + id) throw new Error("附件不存在或路径异常。");
+    const file = await this.file(metadata.path);
+    return { metadata, bytes: file.bytes };
+  }
+  async backup() {
+    const state = await this.readState(); const files = [];
+    for (const [path, metadata] of Object.entries(state.documents)) if (path.startsWith("attachments/")) {
+      const id = path.split("/")[1]; const file = await this.attachment(id);
+      files.push({ id, name: metadata.name, mime: metadata.mime, data: bytes64(file.bytes) });
+    }
+    return { format: "jobsearch-workbench-v1", documents: state.documents, files };
+  }
+  async request(path, body, signal) {
+    if (path === "/api/state") return this.readState();
+    if (path === "/api/status") return { storage: "github-private", ai: { provider: "github", configured: true, lastResult: "untested", search: false } };
+    if (path === "/api/document") {
+      if (!/^(profile|meta|resumes|experiences|companies|applications|tailored|analyses|queue|attachments)\/[A-Za-z0-9_-]{1,200}$/.test(body.path)) throw new Error("无效的记录路径。");
+      return this.changeDocuments(docs => {
+        if (body.operation === "delete") delete docs[body.path];
+        else if (body.operation === "set") docs[body.path] = body.data;
+        else if (body.operation === "update" && docs[body.path]) docs[body.path] = { ...docs[body.path], ...body.data };
+        else throw new Error("记录不存在或操作无效。");
+      });
+    }
+    if (path === "/api/backup") return this.backup();
+    if (path === "/api/restore") {
+      if (body.format !== "jobsearch-workbench-v1" || !body.documents || typeof body.documents !== "object" || Array.isArray(body.documents)) throw new Error("备份格式不正确。");
+      for (const [key, value] of Object.entries(body.documents)) if (!/^(profile|meta|resumes|experiences|companies|applications|tailored|analyses|queue|attachments)\/[A-Za-z0-9_-]{1,200}$/.test(key) || !value || typeof value !== "object" || Array.isArray(value)) throw new Error("备份包含无效记录。");
+      // Git commit history retains the pre-import state. No force push or reset.
+      for (const file of body.files || []) {
+        if (!/^[a-f0-9]{32}$/.test(file.id)) throw new Error("备份中的附件标识无效。");
+        await this.putFile(new File([unbase64(file.data)], file.name, { type: file.mime }), file.id);
+      }
+      await this.changeDocuments(docs => Object.assign(docs, body.documents));
+      return { count: Object.keys(body.documents).length };
+    }
+    if (path === "/api/ai") return this.ai(body, signal);
+    throw new Error("当前 GitHub 模式不支持此操作。");
+  }
+  async ai(body, signal) {
+    if (body.search) throw new Error("GitHub Models 不提供联网检索。请粘贴招聘或面试资料后分析。");
+    const content = [{ type: "text", text: body.prompt }, ...(body.images || []).map(url => ({ type: "image_url", image_url: { url } }))];
+    let response;
+    try { response = await fetch("https://models.github.ai/inference/chat/completions", { method: "POST", signal, headers: { Authorization: "Bearer " + this.token, "Content-Type": "application/json", Accept: "application/vnd.github+json" }, body: JSON.stringify({ model: "openai/gpt-4.1", messages: [{ role: "system", content: '你是求职助手，只依据输入资料回答，不编造经历。只输出 JSON 对象。' + (body.text ? '将转录结果放在 text 字段。' : '') }, { role: "user", content }], response_format: { type: "json_object" }, max_tokens: 4000 }) }); }
+    catch (_) { throw new Error("无法连接 GitHub Models，请检查网络。"); }
+    if (!response.ok) throw new Error(response.status === 429 ? "GitHub Models 请求额度已用完，请稍后重试；你的文件已保存在私有仓库。" : "GitHub Models 调用失败，请确认令牌启用了 Models 读取权限，并且账户可用该模型。");
+    const result = await response.json(); let value;
+    try { value = JSON.parse(result.choices[0].message.content); } catch (_) { throw new Error("AI 返回格式异常，未保存分析，请重试。"); }
+    if (!value || typeof value !== "object" || Array.isArray(value)) throw new Error("AI 返回的不是 JSON 对象。");
+    return value;
+  }
+}
+
+function githubLogin(message = "") {
+  let saved = {}; try { saved = JSON.parse(localStorage.getItem("workbench-github-repo") || "{}"); } catch (_) {}
+  $("#nav").innerHTML = ""; $("#railfoot").textContent = "私人数据 · GitHub 私有仓库";
+  $("#main").innerHTML = `<section class="sheet" style="max-width:560px;margin:5vh auto"><h1>连接你的私人工作台</h1><p>记录、原始图片和文件保存在你指定的 GitHub 私有仓库。网页程序不包含个人数据。</p>
+    <form id="github-login" class="stack"><label class="f"><span>GitHub 用户名</span><input id="gh-owner" value="${esc(saved.owner || "kaledink")}" required autocomplete="username"></label>
+    <label class="f"><span>私人数据仓库名（必须为 Private）</span><input id="gh-repo" value="${esc(saved.repo || "jobsearch-workbench-data")}" required></label>
+    <label class="f"><span>GitHub 细粒度访问令牌</span><input id="gh-token" type="password" required autocomplete="off" placeholder="仅限私人数据仓库，Contents 读写；AI 另需 Models 读取"></label>
+    <p class="note">令牌仅保存在本页内存中，退出或刷新后需重新输入，不写入仓库。</p>
+    <p class="note">首次使用：<a href="https://github.com/new" target="_blank" rel="noopener noreferrer">创建私有数据仓库</a>（可命名 jobsearch-workbench-data），再<a href="https://github.com/settings/personal-access-tokens/new" target="_blank" rel="noopener noreferrer">创建仅授权该仓库的细粒度令牌</a>，选择 Contents 读写；AI 另需 Models 读取。不要把令牌发到聊天中。</p>
+    <button class="btn primary" type="submit">登录并读取云端数据</button><p id="gh-error" role="alert">${esc(message)}</p></form></section>`;
+  $("#github-login").onsubmit = async e => {
+    e.preventDefault(); const button = e.target.querySelector("button"); button.disabled = true;
+    const owner = $("#gh-owner").value.trim(), repo = $("#gh-repo").value.trim(), token = $("#gh-token").value.trim();
+    try {
+      if (!/^[A-Za-z0-9_-]+$/.test(owner) || !/^[A-Za-z0-9_.-]+$/.test(repo)) throw new Error("请检查用户名和仓库名。");
+      const driver = new GitHubStorage(owner, repo, token); await driver.connect();
+      S.github = driver; S.fatal = "";
+      try { localStorage.setItem("workbench-github-repo", JSON.stringify({ owner, repo })); } catch (_) {}
+      if (!VIEWS.some(v => v[0] === "files")) VIEWS.push(["files", "文件与图片"]);
+      if (!COLLS.includes("attachments")) COLLS.push("attachments");
+      S.d.attachments = []; await localBoot();
+    } catch (error) { $("#gh-error").textContent = error.message; button.disabled = false; }
+  };
+}
+
+async function archiveFile(file) {
+  if (!S.github) return null;
+  return S.github.putFile(file);
+}
+
+V.files = () => `<div class="head"><div><h1>文件与图片</h1><p class="sub">原始文件保存在 GitHub 私有仓库，换设备登录后仍可读取。每个文件最大 15MB。</p></div><button class="btn primary" data-act="uploadFiles">上传文件或图片</button></div>
+  <div class="sheet">${(S.d.attachments || []).length ? `<div class="list">${S.d.attachments.map(f => `<div class="li"><div class="grow"><b>${esc(f.name)}</b><div class="note">${Math.ceil(f.size / 1024)} KB · ${esc((f.createdAt || "").slice(0, 10))}</div></div>${/^image\/(png|jpeg|webp)$/.test(f.mime) ? `<button class="btn sm" data-act="previewFile" data-id="${f.id}">查看图片</button>` : ""}<button class="btn sm" data-act="downloadFile" data-id="${f.id}">下载原件</button></div>`).join("")}</div>` : `<p class="note">还没有文件。上传简历和招聘截图时，也会在这里保存原件。</p>`}</div>`;
+
+async function uploadCloudFiles() {
+  const input = document.createElement("input"); input.type = "file"; input.multiple = true;
+  input.onchange = async () => {
+    let count = 0;
+    try { for (const file of input.files) { await archiveFile(file); count++; } toast(`已保存 ${count} 个文件到私人仓库。`); }
+    catch (error) { toast(`已保存 ${count} 个文件；其余未完成：${error.message}`, true); }
+  }; input.click();
+}
+
+async function openCloudFile(id, preview = false) {
+  const { metadata, bytes } = await S.github.attachment(id);
+  if (preview && /^image\/(png|jpeg|webp)$/.test(metadata.mime)) {
+    const url = URL.createObjectURL(new Blob([bytes], { type: metadata.mime })); S.github.fileURLs.push(url);
+    modal(`<h2>${esc(metadata.name)}</h2><img src="${url}" alt="${esc(metadata.name)}" style="max-width:100%;max-height:65vh"><button class="btn" data-act="closeModal">关闭</button>`, true);
+  } else browserDownload({ filename: metadata.name, data: new Blob([bytes], { type: metadata.mime }), archived: true });
+}
+
+function githubLogout() { if (S.github) { for (const url of S.github.fileURLs) URL.revokeObjectURL(url); S.github.token = ""; } location.reload(); }
+/* ============ AI flows ============ */
+async function organize() {
+  setBusy("organize", true);
+  try {
+    const texts = S.d.resumes.map(r => `【${r.title}】\n${(r.text || "").slice(0, 14000)}`).join("\n\n").slice(0, 60000);
+    const existing = S.d.experiences.map(e => ({ id: e.id, type: e.type, org: e.org, role: e.role, start: e.start, end: e.end, bullets: e.bullets }));
+    const r = await ai(`你是简历整理助手。下面是同一位候选人的多份简历原文，以及已有的经历库。请把所有经历去重合并成一份完整经历库。
+规则：
+1. 同一段经历（同一机构+相近时间）只保留一条，bullets 取各版本中信息最完整、最具体的表述并合并去重，不要改写事实或数字，不要编造。
+2. 若与已有经历库中的某条是同一段经历，填写 matchId 为那条的 id。
+3. type 只能是：intern 实习 / work 工作 / research 科研 / project 项目 / leadership 学生工作或社团 / publication 论文成果 / award 获奖 / other。
+4. 时间统一写成 YYYY-MM 或 YYYY；进行中写「至今」。
+5. tags 从以下方向中选与该经历相关的（可多选或空）：${DIRS.join("、")}。
+6. 同时提取基本资料与教育经历；没有的字段留空字符串。
+已有经历库：${JSON.stringify(existing)}
+简历原文：
+${texts}
+只输出 JSON：{"basic":{"name":"","nameEn":"","gender":"","birth":"","phone":"","email":"","wechat":"","politics":"","hometown":"","residence":"","gradDate":""},"education":[{"school":"","college":"","major":"","degree":"","start":"","end":"","gpa":"","rank":"","advisor":"","thesis":""}],"languages":"","skills":"","awards":"一行一项","experiences":[{"matchId":"","type":"","org":"","role":"","start":"","end":"","location":"","bullets":[""],"tags":[""]}]}`, { tier: "complex" });
+    let added = 0, updated = 0;
+    for (const x of r.experiences || []) {
+      const body = { type: x.type || "other", org: x.org || "", role: x.role || "", start: x.start || "", end: x.end || "", location: x.location || "", bullets: (x.bullets || []).filter(Boolean), tags: (x.tags || []).filter(t => DIRS.includes(t)), updatedAt: new Date().toISOString() };
+      if (x.matchId && byId("experiences", x.matchId)) { await db.set("experiences/" + x.matchId, body); updated++; }
+      else { await db.set("experiences/" + uid(), body); added++; }
+    }
+    await mergeProfile(r);
+    toast(`经历库已整理：新增 ${added} 条，更新 ${updated} 条。请到「报名信息」核对基本资料。`);
+  } catch (e) { toast(errText(e), true); }
+  setBusy("organize", false);
+}
+async function mergeProfile(r) {
+  const p = JSON.parse(JSON.stringify(S.d.profile || {}));
+  p.basic = p.basic || {};
+  for (const [k, v] of Object.entries(r.basic || {})) if (v && !p.basic[k]) p.basic[k] = v;
+  if (!(p.education || []).length && (r.education || []).length) p.education = r.education.filter(e => e.school);
+  for (const k of ["languages", "skills", "awards"]) if (r[k] && !p[k]) p[k] = r[k];
+  p.updatedAt = new Date().toISOString();
+  await db.set("profile/main", p);
+}
+async function runMatch(id) {
+  const a = appById(id); if (!a) return;
+  const jd = ($("#jd-" + id) && $("#jd-" + id).value.trim()) || a.jd || "";
+  if (!jd && !extrasText(a)) { toast("先粘贴 JD，或在上方补充关键信息。", true); return; }
+  if (!S.d.experiences.length) { toast("经历库是空的，先上传简历并整理。", true); return; }
+  setBusy("match-" + id, true);
+  try {
+    const r = await ai(`你是资深求职顾问，熟悉中国校招（政府机关/选调/事业单位、高校教职/辅导员/博士后、国企央企）。根据候选人资料与岗位信息评估匹配度。只依据给出的事实，不臆测、不编造。
+候选人：${JSON.stringify(profileBrief())}
+经历库：${JSON.stringify(expBrief())}
+岗位：公司「${a.company || "未知"}」，岗位「${a.role || "未知"}」，网址 ${a.url || "无"}
+JD 全文：
+${(jd || "（未提供，以用户补充信息为准）").slice(0, 12000)}
+${extrasBlock(a)}
+只输出 JSON：{"company":{"name":"","industry":"","nature":"央企/国企/民企/外企/事业单位/党政机关/国际组织/高校/智库/其他","direction":"从【${DIRS.join("|")}】中选一个，都不符合则空"},"role":{"title":"","city":"","deadline":"YYYY-MM-DD 或空"},"score":0,"verdict":"一句话结论","dims":[{"name":"专业背景","score":0,"note":""},{"name":"相关经历","score":0,"note":""},{"name":"技能与工具","score":0,"note":""},{"name":"硬性条件","score":0,"note":""},{"name":"方向契合","score":0,"note":""}],"hardChecks":[{"item":"学历/届别/专业/语言/政治面貌/年龄等 JD 中写明的硬性要求","status":"满足|不满足|待确认","note":""}],"strengths":["..."],"gaps":["短板 + 具体弥补建议"],"recommend":[{"expId":"经历库中的 id","reason":"为什么这段最该突出"}],"keywords":["JD 关键词，6-12 个"]}`);
+    const patch = { jd, match: { ...r, at: new Date().toISOString() } };
+    if (!a.company && r.company && r.company.name) patch.company = r.company.name;
+    if (!a.role && r.role && r.role.title) patch.role = r.role.title;
+    if (!a.city && r.role && r.role.city) patch.city = r.role.city;
+    if (!a.deadline && r.role && r.role.deadline) patch.deadline = r.role.deadline;
+    if (!a.nature && r.company) patch.nature = r.company.nature || "";
+    if (!a.category && r.company && DIRS.includes(r.company.direction)) patch.category = r.company.direction;
+    if (!a.industry && r.company) patch.industry = r.company.industry || "";
+    await saveApp(a, patch);
+    S.tailorSel[id] = null;
+  } catch (e) { toast(errText(e), true); }
+  setBusy("match-" + id, false);
+}
+async function fetchJD(id) {
+  const a = appById(id); if (!a || !a.url) return;
+  setBusy("jd-" + id, true);
+  try {
+    const tab = await openTab(a.url); await sleep(2500);
+    let text = await pageText(tab, 30000);
+    if (text.length > 6000) {
+      const r = await ai(`从下面的招聘网页文本中摘出与「${a.role || "目标岗位"}」相关的岗位信息原文（公司、岗位名称、工作地点、岗位职责、任职要求、截止时间），保持原文，不要改写。若页面上有多个岗位，全部列出并以岗位名分隔。只输出 JSON：{"jd":""}\n\n${text.slice(0, 30000)}`, { tier: "quick" });
+      text = r.jd || text;
+    }
+    await saveApp(a, { jd: text.slice(0, 20000), browserTab: tab || "" });
+    toast("已读取招聘页内容，请核对后分析。");
+  } catch (e) { toast(errText(e), true); }
+  setBusy("jd-" + id, false);
+}
+async function runTailor(id) {
+  const a = appById(id); if (!a) return;
+  const ids = (S.tailorSel[id] || []).filter(x => byId("experiences", x));
+  if (!ids.length) { toast("至少选一段经历。", true); return; }
+  setBusy("tailor-" + id, true);
+  try {
+    const list = ids.map(x => byId("experiences", x)).map(e => ({ expId: e.id, 机构: e.org, 角色: e.role, 时间: (e.start || "") + "~" + (e.end || ""), bullets: (e.bullets || []).map((b, i) => ({ i, text: b })) }));
+    const r = await ai(`任务：为投递「${a.company}」的「${a.role || "该岗位"}」生成定制版简历表述。
+铁律：
+1. 不新增、不删除任何事实；时间、机构、职位、数字、成果、获奖一律不变；不得夸大。
+2. 只能调整措辞、语序、侧重点、动词和术语，使之贴合 JD 的关键词和用人单位的话语体系（如政府机关/事业单位偏「调查研究、统筹协调、服务大局、政策落实」，高校教职/博士后偏「研究方向、学术产出、教学与指导」，辅导员偏「学生工作、思想引领、组织活动」，国企央企偏「战略研究、综合管理、服务国家战略」）。
+3. 某条已经合适就不改：changed=false，new 填原文。
+4. 每处修改都写 reason，说明对应 JD 的哪一点。
+5. 另写 2–3 句「个人概述」，只能基于下列事实。
+JD 关键词：${JSON.stringify((a.match || {}).keywords || [])}
+JD：
+${(a.jd || "").slice(0, 8000)}
+${extrasBlock(a)}
+候选人教育背景：${JSON.stringify(profileBrief()["学历"])}
+待改写经历：${JSON.stringify(list)}
+只输出 JSON：{"notes":"整体改写策略一句话","summary":{"text":"","reason":""},"items":[{"expId":"","bullets":[{"i":0,"new":"","changed":true,"reason":""}]}]}`, { tier: "complex" });
+    const order = (r.items || []).filter(it => ids.includes(it.expId));
+    for (const x of ids) if (!order.find(o => o.expId === x)) order.push({ expId: x, bullets: [] });
+    await db.set("tailored/" + id, { expIds: ids, items: order, summary: r.summary || null, notes: r.notes || "", accepted: {}, at: new Date().toISOString() });
+  } catch (e) { toast(errText(e), true); }
+  setBusy("tailor-" + id, false);
+}
+async function fillScan(id) {
+  const a = appById(id); const k = "fill-" + id;
+  S.logs[k] = []; setBusy(k, "scan");
+  try {
+    const tab = S.fillTab && S.fillTab.app === id ? S.fillTab.tab : (a.browserTab || null);
+    log(k, "读取当前页面的表单字段…");
+    let tree = rtext(await br("read_page", withTab(tab, { filter: "interactive", max_chars: 45000 })));
+    if (!/ref_\d+/.test(tree)) { log(k, "没有找到可填写的字段，请确认表单已打开。"); setBusy(k, false); return; }
+    log(k, `找到 ${(tree.match(/ref_\d+/g) || []).length} 个可交互元素，正在匹配资料…`);
+    const p = S.d.profile || {};
+    const td = tailoredDoc(a);
+    const profile = { 基本信息: p.basic || {}, 教育经历: p.education || [], 语言: p.languages, 技能: p.skills, 获奖: p.awards, 常用问答: p.qa || [], 经历: (td ? tailoredContent(a) : S.d.experiences.map(e => ({ e, bullets: e.bullets }))).map(x => ({ 类型: EXP_TYPES[x.e.type], 机构: x.e.org, 角色: x.e.role, 开始: x.e.start, 结束: x.e.end, 地点: x.e.location, 描述: (x.bullets || []).join("；") })) };
+    const r = await ai(`你在帮候选人填写网申表单。下面是页面可交互元素的无障碍树（每个元素带 [ref_N]）和候选人的报名资料。
+规则：
+1. 只填资料里明确有的信息；资料没有、需要主观判断、或不确定的字段不填，放进 skipped 并说明原因。
+2. 绝不填写：密码、验证码、身份证/护照等证件号码、银行卡号；不处理文件上传；不点击任何按钮（包括提交、保存、下一步）。
+3. 下拉框的 value 必须是页面选项上的原文；单选/复选框的 value 用 true。
+4. 日期按页面提示的格式；没有提示用 YYYY-MM 或 YYYY-MM-DD。
+5. 「自我评价」「求职动机」等开放题，优先用常用问答里最相近的答案；没有就放进 skipped。
+6. 已经有正确值的字段不要重复填。
+报名资料：${JSON.stringify(profile).slice(0, 20000)}
+${extrasBlock(a, 3000)}
+页面元素：
+${tree.slice(0, 40000)}
+只输出 JSON：{"fills":[{"ref":"ref_12","label":"字段名","value":"值"}],"skipped":[{"label":"","reason":""}]}`);
+    S.fill = { app: id, tab, fills: (r.fills || []).filter(f => /^ref_\d+$/.test(f.ref)).map(f => ({ ...f, on: true })), skipped: r.skipped || [] };
+    log(k, `可自动填写 ${S.fill.fills.length} 项，需要你处理 ${S.fill.skipped.length} 项。请在下方核对。`);
+  } catch (e) { log(k, "出错：" + errText(e)); }
+  setBusy(k, false);
+}
+async function fillApply(id) {
+  const st = S.fill; if (!st || st.app !== id) return; const k = "fill-" + id;
+  setBusy(k, "apply"); let ok = 0;
+  for (const f of st.fills) {
+    if (!f.on || f.done === "ok") continue;
+    try {
+      const v = f.value === "true" ? true : f.value === "false" ? false : f.value;
+      await br("form_input", withTab(st.tab, { ref: f.ref, value: v, action_summary: "填写「" + String(f.label).slice(0, 20) + "」" }));
+      f.done = "ok"; ok++;
+    } catch (e) { f.done = e.code === "cancelled" ? "你取消了这一项" : "未写入"; }
+    render();
+  }
+  log(k, `已写入 ${ok} 项。请在浏览器里核对，确认无误后由你自己点保存或提交。`);
+  setBusy(k, false);
+}
+let deepCtl = null;
+async function runDeep(id) {
+  if (S.local) return localDeep(id);
+  const a = appById(id); if (!a) return; const k = "prep-" + id;
+  S.logs[k] = []; setBusy(k, true); deepCtl = new AbortController();
+  let tab = null; let n = 0;
+  const engine = q => S.engine === "baidu" ? "https://www.baidu.com/s?wd=" + encodeURIComponent(q) : "https://cn.bing.com/search?q=" + encodeURIComponent(q);
+  const ensureTab = async url => { if (!tab) { tab = await openTab(url); await sleep(2000); } else { await br("navigate", withTab(tab, { url })); await sleep(1500); } };
+  const tools = [
+    { name: "web_search", description: "用搜索引擎检索中文或英文网页，返回搜索结果页文本（含标题、摘要、链接）。", inputSchema: { type: "object", properties: { query: { type: "string" } }, required: ["query"] },
+      async execute(input) { n++; log(k, `检索 ${n}：${input.query}`); await ensureTab(engine(String(input.query || ""))); return { text: (await pageText(tab, 7000)) }; } },
+    { name: "open_page", description: "打开一个网址并返回页面正文文本。", inputSchema: { type: "object", properties: { url: { type: "string" } }, required: ["url"] },
+      async execute(input) { n++; log(k, `阅读 ${n}：${input.url}`); await ensureTab(String(input.url || "")); return { text: (await pageText(tab, 10000)) }; } },
+  ];
+  try {
+    log(k, "开始联网分析（用内置浏览器）…");
+    const r = await ai(deepPrompt(a), { tier: "complex", tools, signal: deepCtl.signal });
+    await db.set("analyses/" + id, { ...r, by: "page", at: new Date().toISOString() });
+    log(k, "完成。");
+  } catch (e) { log(k, e.code === "cancelled" ? "已停止。" : "出错：" + errText(e)); }
+  deepCtl = null; setBusy(k, false);
+}
+function deepPrompt(a) {
+  return `你是面试教练兼行业研究员。请为候选人准备「${a.company}」「${a.role || "该岗位"}」的面试。
+先用 web_search / open_page 工具查最新公开信息：机构官网与官方公众号文章、近一年新闻、年报或政策文件、行业报告、往届面经。检索 4–10 次即可，不要无限检索。
+所有事实性陈述必须来自你查到的资料，并把用到的网页列入 sources；查不到的写「未查到公开信息」，绝不编造。自我介绍只能使用候选人资料里的真实经历。
+今天是 ${today()}。
+候选人：${JSON.stringify(profileBrief())}
+经历：${JSON.stringify(expBrief())}
+JD：${(a.jd || "未提供").slice(0, 6000)}
+${extrasBlock(a)}
+匹配分析：${JSON.stringify(a.match ? { verdict: a.match.verdict, strengths: a.match.strengths, gaps: a.match.gaps } : "未做")}
+只输出 JSON：{"intro1":"1分钟中文自我介绍，约250字，第一人称，突出与岗位最相关的2-3段经历","intro3":"3分钟版本，约700字","introEn":"英文1分钟版本；仅当岗位涉及外语、涉外或国际组织时写，否则空","industry":"行业/领域现状与趋势，要点式，每行以 - 开头","business":"该机构业务方向、近期动态、战略重点，要点式","competitors":[{"name":"","compare":"与目标机构的对比"}],"role":"岗位实际工作内容、考核重点、所在部门，要点式","questions":[{"q":"预测问题","type":"动机|经历|专业|情景|压力|时政|英文","intent":"考官想考察什么","hint":"结合候选人真实经历的答题要点，要点式"}],"ask":["面试最后可以反问的问题"],"sources":[{"title":"","url":""}]}
+questions 给 12–18 个。`;
+}
+async function parseNotice() {
+  const s = S.sched; const text = ($("#sc-text") || {}).value || "";
+  if (!text.trim()) { toast("先粘贴通知原文。", true); return; }
+  S.busy.sc = true; drawSchedule(); $("#sc-text").value = text;
+  try {
+    const r = await ai(`从下面的笔试/面试/测评通知中提取所有可选时间段。今天是 ${today()}，时区 Asia/Shanghai；没写年份时按最近的未来日期推断。只输出 JSON：{"slots":[{"start":"YYYY-MM-DDTHH:mm","end":"YYYY-MM-DDTHH:mm 或空","label":"原文对这个时间的描述"}],"location":"地点或会议链接","note":"需要准备的事项，一句话"}\n\n${text.slice(0, 8000)}`, { tier: "quick" });
+    s.slots = (r.slots || []).filter(x => /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}/.test(x.start || ""));
+    s.pick = s.slots.length === 1 ? 0 : -1;
+    s.location = r.location || s.location; s.note = r.note || s.note;
+    if (!s.slots.length) toast("没识别到具体时间，请手动填写。", true);
+  } catch (e) { toast(errText(e), true); }
+  delete S.busy.sc; drawSchedule(); $("#sc-text").value = text;
+}
+
+/* ============ companies import ============ */
+const CO_MAP = [["range", /起止|报名时间|招聘时间|网申时间|时间段/], ["name", /公司|企业|单位|机构|名称/], ["category", /方向|分类|类别/], ["industry", /行业|领域/], ["nature", /性质|类型|所有制/], ["batch", /批次|招聘类型|届/], ["roles", /岗位|职位/], ["cities", /地点|城市|地区|base/i], ["openDate", /开始|开放|发布/], ["deadline", /截止|结束|deadline/i], ["url", /链接|网址|官网|投递|url|网申/i], ["notes", /备注|说明/]];
+function excelDate(v) {
+  if (typeof v === "number" && v > 30000 && v < 80000) return ymd(new Date(Math.round((v - 25569) * 864e5)));
+  const s = String(v || "").trim(); const m = s.match(/(\d{4})[年./-](\d{1,2})[月./-](\d{1,2})/);
+  return m ? `${m[1]}-${m[2].padStart(2, "0")}-${m[3].padStart(2, "0")}` : s;
+}
+function parseRange(v) {
+  const s = String(v || ""); const y = new Date().getFullYear(); const out = [];
+  const re = /(?:(\d{4})[年./-])?(\d{1,2})[月./-](\d{1,2})日?/g; let m;
+  while ((m = re.exec(s)) && out.length < 2) out.push(`${m[1] || (out[0] ? out[0].slice(0, 4) : y)}-${m[2].padStart(2, "0")}-${m[3].padStart(2, "0")}`);
+  return [out[0] || "", out[1] || (/招满|额满/.test(s) ? "招满即止" : "")];
+}
+async function upsertCompanies(rows, source) {
+  let add = 0, upd = 0;
+  for (const r of rows) {
+    if (!r.name) continue;
+    const id = hashId(r.name + "|" + (r.batch || ""));
+    const old = byId("companies", id);
+    const body = { ...(old || {}), ...Object.fromEntries(Object.entries(r).filter(([, v]) => v !== "" && v != null)), source: old && old.source === "飞书" ? "飞书" : source, syncedAt: new Date().toISOString() };
+    delete body.id;
+    if (body.category && !DIRS.includes(body.category)) { body.categoryRaw = body.category; body.category = ""; }
+    await db.set("companies/" + id, body); old ? upd++ : add++;
+    if ((add + upd) % 10 === 0) setBusy("import", `已写入 ${add + upd} / ${rows.length}`);
+  }
+  return { add, upd };
+}
+async function importFile(file) {
+  setBusy("import", "读取文件…"); toast("正在导入 " + file.name);
+  try {
+    let raw;
+    if (/\.csv$/i.test(file.name)) raw = parseCSV(await file.text());
+    else {
+      await loadScript(LIBS.xlsx);
+      const wb = window.XLSX.read(await file.arrayBuffer(), { type: "array" });
+      raw = window.XLSX.utils.sheet_to_json(wb.Sheets[wb.SheetNames[0]], { defval: "" });
+    }
+    if (!raw.length) { toast("表格是空的。", true); setBusy("import", false); return; }
+    const heads = Object.keys(raw[0]); const map = {};
+    for (const h of heads) for (const [k, re] of CO_MAP) if (!Object.values(map).includes(k) && re.test(h)) { map[h] = k; break; }
+    if (!Object.values(map).includes("name")) { toast("没找到「公司/企业/单位」列，请检查表头。", true); setBusy("import", false); return; }
+    const rows = raw.map(r => { const o = { extra: {} }; for (const h of heads) { const k = map[h]; const v = r[h]; if (k === "range") { const [op, en] = parseRange(v); if (op && !o.openDate) o.openDate = op; if (en && !o.deadline) o.deadline = en; }
+        else if (k) o[k] = (k === "deadline" || k === "openDate") ? excelDate(v) : String(v).trim(); else if (String(v).trim()) o.extra[h] = String(v).trim().slice(0, 300); } return o; });
+    const { add, upd } = await upsertCompanies(rows, "飞书");
+    toast(`导入完成：新增 ${add} 家，更新 ${upd} 家。`);
+  } catch (e) { toast("导入失败：" + (e.message || errText(e)), true); }
+  setBusy("import", false);
+}
+const FS = { host: "https://kcnrqqpruo3a.feishu.cn", base: "Hmiibiihoav4SXs56Ufc6DkEnxq", table: "tblmZUlIlvcSgH3V", view: "vewqTT2HnI" };
+const FS_PAGE = `${FS.host}/base/${FS.base}?table=${FS.table}&view=${FS.view}`;
+async function fsJSON(tab, url) {
+  await br("navigate", withTab(tab, { url }));
+  await sleep(600);
+  const r = await br("get_page_text", withTab(tab, { max_chars: 4000000 }));
+  let t = ((r && r.content) || []).filter(b => b.type === "text").map(b => b.text).find(x => x.includes("{")) || rtext(r);
+  const i = t.indexOf("\n---\n"); if (i >= 0) t = t.slice(i + 5);
+  const j = t.indexOf("{"); if (j < 0) throw new Error("飞书没有返回数据");
+  let line = t.slice(j); const nl = line.indexOf("\n"); if (nl >= 0) line = line.slice(0, nl);
+  line = line.trim();
+  if (!line.endsWith("}")) { const e = new Error("返回内容被截断"); e.trunc = true; throw e; }
+  return JSON.parse(line);
+}
+async function unpack(s) {
+  if (typeof s !== "string") return s;
+  try { return JSON.parse(s); } catch (e) {}
+  const bin = Uint8Array.from(atob(s), c => c.charCodeAt(0));
+  return JSON.parse(await new Response(new Blob([bin]).stream().pipeThrough(new DecompressionStream("gzip"))).text());
+}
+function fsCategory(nature, name, roles) {
+  const s = (nature || "") + " " + (name || "");
+  if (/央企|国企|央国企/.test(nature || "")) return "国企央企";
+  if (/事业单位|机关|政府|公务员|选调/.test(s)) return "政府机关/事业单位";
+  if (/(大学|学院|高校)/.test(name || "") && /辅导员|博士后|教师|教职|讲师|研究员/.test((roles || "") + (name || ""))) return "高校教职、辅导员、博士后";
+  return "";
+}
+async function dbRetry(fn) { for (let k = 0; k < 4; k++) { try { return await fn(); } catch (e) { if (e && (e.code === "resource_exhausted" || e.code === "unavailable") && k < 3) { await sleep(1500 * (k + 1)); continue; } throw e; } } }
+async function feishuSync() {
+  if (!S.hostOK) { toast("需要在 Claude 桌面 App 里打开本页。", true); return; }
+  setBusy("import", "打开飞书表格…");
+  try {
+    const tab = await openTab(FS_PAGE); await sleep(4000);
+    setBusy("import", "读取表格结构…");
+    const cv = await fsJSON(tab, `${FS.host}/space/api/v1/bitable/${FS.base}/clientvars?tableID=${FS.table}&viewID=${FS.view}&recordLimit=1&ondemandLimit=1&needBase=true&viewLazyLoad=true&ondemandVer=2&openType=0&noMissCS=true&optimizationFlag=1&removeFmlExtra=true`);
+    if (cv.code !== 0) throw new Error("飞书返回：" + (cv.msg || cv.code));
+    const tb = await unpack(cv.data.table);
+    const fm = tb.fieldMap, rev = tb.meta.rev, total = tb.meta.recordsNum || tb.recordCount || 0;
+    const F = {}; for (const [id, f] of Object.entries(fm)) F[f.name] = { id, type: f.type, opt: Object.fromEntries(((f.property && f.property.options) || []).map(o => [o.id, o.name])) };
+    const cell = (r, name) => r[(F[name] || {}).id];
+    const txt = (r, name) => { const c = cell(r, name); if (!c || c.value == null) return ""; const v = c.value; if (Array.isArray(v)) return v.map(x => typeof x === "string" ? x : (x.text || x.name || "")).join(""); return String(v); };
+    const sel = (r, name) => { const c = cell(r, name); if (!c || c.value == null) return ""; const v = c.value; return (Array.isArray(v) ? v : [v]).map(x => (F[name].opt || {})[x] || x).join("、"); };
+    const link = (r, name) => { const c = cell(r, name); if (!c || c.value == null) return ""; const v = c.value; const arr = Array.isArray(v) ? v : [v]; for (const x of arr) { const u = typeof x === "string" ? x : (x.link || x.url || x.text || ""); const m = String(u).match(/https?:\/\/\S+/); if (m) return m[0]; } return ""; };
+    const dateOf = ms => ms ? ymd(new Date(ms)) : "";
+    const all = {};
+    let step = 1000;
+    for (let off = 0; off < Math.max(total, 1); off += step) {
+      setBusy("import", `读取记录 ${off + 1}–${Math.min(off + step, total)} / ${total}…`);
+      let j;
+      try { j = await fsJSON(tab, `${FS.host}/space/api/v1/bitable/${FS.base}/records?tableId=${FS.table}&viewId=${FS.view}&tableRev=${rev}&depRev=%7B%7D&viewLazyLoad=true&offset=${off}&limit=${step}&tableID=${FS.table}&viewID=${FS.view}&removeFmlExtra=true`); }
+      catch (e) { if (e.trunc && step > 100) { step = Math.floor(step / 2); off -= step; continue; } throw e; }
+      if (j.code !== 0) throw new Error("飞书返回：" + (j.msg || j.code));
+      let rm = null;
+      for (const k of Object.keys(j.data || {})) { const v = await unpack(j.data[k]).catch(() => null); if (v && typeof v === "object" && v.recordMap) { rm = v.recordMap; break; } }
+      if (!rm) throw new Error("记录格式无法识别");
+      Object.assign(all, rm);
+      if (Object.keys(rm).length < step) break;
+    }
+    const T = new Date(); T.setHours(0, 0, 0, 0);
+    const rows = [];
+    for (const [rid, r] of Object.entries(all)) {
+      const dl = cell(r, "具体筛选时间"); const dlms = dl && dl.value;
+      const dlText = txt(r, "截止时间");
+      if (!(dlms && dlms >= T.getTime()) || dlText.includes("尽快投递")) continue;
+      const name = txt(r, "公司名称").trim(); if (!name) continue;
+      const nature = sel(r, "企业性质"), roles = txt(r, "可投岗位");
+      rows.push({ id: "fs-" + rid, name, nature, industry: sel(r, "所属行业"), batch: sel(r, "招聘类型"), cohort: sel(r, "届次"), edu: sel(r, "学历要求"), cities: txt(r, "工作地"), roles,
+        deadline: dateOf(dlms), deadlineText: dlText, noExam: !!(cell(r, "免笔试") && cell(r, "免笔试").value), notes: txt(r, "备注"),
+        url: link(r, "投递渠道") || link(r, "企业招聘公告"), annUrl: link(r, "企业招聘公告"), feishuUrl: `${FS_PAGE}&record=${rid}`, feishuId: rid,
+        fsUpdated: dateOf(cell(r, "更新日期") && cell(r, "更新日期").value), category: fsCategory(nature, name, roles) });
+    }
+    let add = 0, upd = 0;
+    for (const row of rows) {
+      const old = byId("companies", row.id); const { id, ...body } = row;
+      if (old && old.category && !body.category) delete body.category;
+      const doc = { ...(old || {}), ...body, source: "飞书", syncedAt: new Date().toISOString() }; delete doc.id;
+      await dbRetry(() => db.set("companies/" + id, doc)); old ? upd++ : add++;
+      if ((add + upd) % 20 === 0) setBusy("import", `写入公司库 ${add + upd} / ${rows.length}…`);
+    }
+    await db.set("meta/feishu", { lastSync: new Date().toISOString(), total, matched: rows.length, view: FS.view });
+    toast(`飞书同步完成：符合视图条件 ${rows.length} 条，新增 ${add}，更新 ${upd}。`);
+  } catch (e) { toast("飞书同步失败：" + (e.message || errText(e)), true); }
+  setBusy("import", false);
+}
+
+/* ============ add from recruitment post ============ */
+function postModal() {
+  S.postImgs = [];
+  modal(`<h2>从招聘推送添加单位</h2>
+  <p class="note" style="margin:0">把公众号推送、官网公告或就业网通知的正文粘贴进来，也可以只给链接或上传截图。AI 会提取单位、岗位、报名时间、要求，并给出匹配度。</p>
+  <label class="f"><span>推送正文（可选）</span><textarea id="pp-text" style="min-height:160px" placeholder="粘贴招聘推送全文"></textarea></label>
+  <label class="f"><span>链接（可选）</span><input type="url" id="pp-url" placeholder="https://mp.weixin.qq.com/…"></label>
+  <label class="f"><span>截图（可选，可多张）</span><input type="file" id="pp-img" accept="image/png,image/jpeg,image/webp" multiple></label>
+  <div class="log" id="log-post" hidden></div>
+  <div class="row" style="justify-content:flex-end"><button class="btn ghost" data-act="closeModal">取消</button><button class="btn primary" data-act="runPost" id="pp-go">识别并添加</button></div>`, true);
+}
+async function runPost() {
+  const text = $("#pp-text").value.trim(), url = $("#pp-url").value.trim(), files = [...($("#pp-img").files || [])];
+  if (!text && !url && !files.length) { toast("至少给正文、链接或截图中的一项。", true); return; }
+  const go = $("#pp-go"); go.disabled = true; go.innerHTML = `<span class="spin"></span> 识别中…`;
+  const lg = $("#log-post"); lg.hidden = false; const say = s => { lg.textContent += (lg.textContent ? "\n" : "") + s; };
+  try {
+    let body = text;
+    if (S.github) for (const file of files) await archiveFile(file);
+    if (!body && url && S.hostOK) { say("用内置浏览器打开链接读取正文…"); const tab = await openTab(url); await sleep(3000); body = (await pageText(tab, 30000)).slice(0, 30000); }
+    let images;
+    if (files.length) { const lim = await S.sample.limits().catch(() => null); if (lim && lim.images) images = files.slice(0, lim.images.maxCount || 5); else say("当前环境不支持识别图片，只用文字。"); }
+    if (!body && !images) throw new Error(url ? "此链接未读取：请直接粘贴招聘正文，或上传截图。" : "没有可识别的内容。");
+    say("提取招聘信息并评估匹配度…");
+    const r = await ai(`下面是一条招聘推送（可能是文字、截图或网页正文）。请提取信息并评估与候选人的匹配度。只根据推送原文提取，原文没有的字段留空，不要编造日期。今天是 ${today()}。
+候选人：${JSON.stringify(profileBrief())}
+经历概要：${JSON.stringify(expBrief().map(e => e.机构 + "·" + e.角色)).slice(0, 3000)}
+推送链接：${url || "无"}
+推送正文：
+${(body || "（见截图）").slice(0, 20000)}
+匹配度评分参考：方向契合（选调/高校教职/博士后/政策研究最高，机关事业单位次之，国企央企总部职能与研究岗中等，技术销售类岗位低）、是否面向博士或政治学/公共管理专业、届别是否含 2027 届、北京是否有岗位。
+只输出 JSON：{"name":"单位名","category":"从【${DIRS.join("|")}】中选一个，都不符合则空","nature":"央企/国企/事业单位/党政机关/高校/科研院所/民企/外企/银行/其他","industry":"","batch":"如 2027届秋招","cohort":"面向届次","edu":"学历要求","roles":"可投岗位，顿号分隔","cities":"","openDate":"YYYY-MM-DD 或空","deadline":"YYYY-MM-DD 或空","deadlineText":"原文对截止时间的描述","url":"报名/投递链接，原文没有则用推送链接","notes":"关键要求与亮点，60字以内（专业、政治面貌、年龄、考试安排、待遇等）","fit":{"score":0,"reason":"30字以内"}}`, { tier: "default", ...(images ? { images: images.length === 1 ? images[0] : images } : {}) });
+    if (!r.name) throw new Error("没识别出单位名称，请补充正文后再试。");
+    const id = "my-" + uid();
+    const docBody = { name: r.name, category: DIRS.includes(r.category) ? r.category : "", nature: r.nature || "", industry: r.industry || "", batch: r.batch || "", cohort: r.cohort || "", edu: r.edu || "", roles: r.roles || "", cities: r.cities || "", openDate: r.openDate || "", deadline: r.deadline || "", deadlineText: r.deadlineText || "", url: r.url || url || "", notes: r.notes || "", rawPost: (body || "").slice(0, 20000), postUrl: url || "", source: "推送", addedAt: today(), verifiedAt: today() };
+    await db.set("companies/" + id, docBody);
+    if (r.fit && typeof r.fit.score === "number") { try { await db.update("meta/fit", { scores: { [id]: { score: Math.round(r.fit.score), reason: r.fit.reason || "" } } }); } catch (e) { await db.set("meta/fit", { scores: { ...(S.d.fitMap || {}), [id]: { score: Math.round(r.fit.score), reason: r.fit.reason || "" } } }); } }
+    closeModal(); toast(`已添加「${r.name}」${r.fit ? "，匹配度 " + r.fit.score : ""}。`);
+  } catch (e) { say("出错：" + (e.message || errText(e))); go.disabled = false; go.textContent = "识别并添加"; }
+}
+
+/* ============ exports ============ */
+function resumeMd(a) {
+  const p = S.d.profile || {}; const b = p.basic || {}; const td = tailoredDoc(a);
+  const L = [`# ${b.name || "姓名"}`, [b.phone, b.email, b.wechat && "微信 " + b.wechat].filter(Boolean).join(" | "), ""];
+  if (td && td.summary && td.summary.text) L.push("## 个人概述", td.summary.text, "");
+  L.push("## 教育背景"); for (const e of p.education || []) L.push(`- **${e.school || ""}** ${e.college || ""} ${e.major || ""} ${e.degree || ""}（${e.start || ""}–${e.end || ""}）${e.gpa ? " GPA " + e.gpa : ""}${e.rank ? " " + e.rank : ""}`);
+  L.push("");
+  const groups = {}; for (const x of tailoredContent(a)) (groups[x.e.type] = groups[x.e.type] || []).push(x);
+  for (const t of Object.keys(EXP_TYPES)) if (groups[t]) { L.push("## " + EXP_TYPES[t] + "经历"); for (const x of groups[t]) { L.push(`### ${x.e.org} · ${x.e.role || ""}（${x.e.start || ""}–${x.e.end || ""}）`); for (const bl of x.bullets) L.push("- " + bl); } L.push(""); }
+  if (p.languages || p.skills) L.push("## 语言与技能", p.languages || "", p.skills || "", "");
+  if (p.awards) L.push("## 荣誉奖项", ...String(p.awards).split(/\n/).filter(Boolean).map(x => "- " + x));
+  return L.join("\n");
+}
+async function exportDocx(a) {
+  try {
+    toast("正在生成 Word…");
+    await loadScript(LIBS.docx);
+    const D = window.docx; const p = S.d.profile || {}; const b = p.basic || {}; const td = tailoredDoc(a);
+    const font = "PingFang SC";
+    const H = t => new D.Paragraph({ spacing: { before: 200, after: 80 }, border: { bottom: { style: D.BorderStyle.SINGLE, size: 6, color: "1E5D68", space: 2 } }, children: [new D.TextRun({ text: t, bold: true, size: 24, font, color: "1E5D68" })] });
+    const P = (t, o = {}) => new D.Paragraph({ spacing: { after: 40 }, children: [new D.TextRun({ text: t, size: 20, font, ...o })] });
+    const B = t => new D.Paragraph({ bullet: { level: 0 }, spacing: { after: 30 }, children: [new D.TextRun({ text: t, size: 20, font })] });
+    const kids = [new D.Paragraph({ alignment: D.AlignmentType.CENTER, children: [new D.TextRun({ text: b.name || "姓名", bold: true, size: 36, font })] }),
+      new D.Paragraph({ alignment: D.AlignmentType.CENTER, spacing: { after: 120 }, children: [new D.TextRun({ text: [b.phone, b.email, b.wechat && "微信 " + b.wechat].filter(Boolean).join("  |  "), size: 19, font, color: "555555" })] })];
+    if (td && td.summary && td.summary.text) kids.push(H("个人概述"), P(td.summary.text));
+    if ((p.education || []).length) { kids.push(H("教育背景")); for (const e of p.education) kids.push(P(`${e.school || ""}  ${e.college || ""} ${e.major || ""}  ${e.degree || ""}`, { bold: true }), P(`${e.start || ""} – ${e.end || ""}${e.gpa ? "   GPA " + e.gpa : ""}${e.rank ? "   " + e.rank : ""}${e.thesis ? "   论文：" + e.thesis : ""}`)); }
+    const groups = {}; for (const x of tailoredContent(a)) (groups[x.e.type] = groups[x.e.type] || []).push(x);
+    for (const t of Object.keys(EXP_TYPES)) if (groups[t]) { kids.push(H(EXP_TYPES[t] + "经历")); for (const x of groups[t]) { kids.push(new D.Paragraph({ spacing: { before: 80, after: 30 }, children: [new D.TextRun({ text: `${x.e.org}  ·  ${x.e.role || ""}`, bold: true, size: 21, font }), new D.TextRun({ text: `\t${x.e.start || ""} – ${x.e.end || ""}`, size: 19, font, color: "555555" })], tabStops: [{ type: D.TabStopType.RIGHT, position: 9600 }] })); for (const bl of x.bullets) kids.push(B(bl)); } }
+    if (p.languages || p.skills) { kids.push(H("语言与技能")); if (p.languages) kids.push(P(p.languages)); if (p.skills) kids.push(P(p.skills)); }
+    if (p.awards) { kids.push(H("荣誉奖项")); for (const x of String(p.awards).split(/\n/).filter(Boolean)) kids.push(B(x)); }
+    const doc = new D.Document({ sections: [{ properties: { page: { margin: { top: 900, bottom: 900, left: 1000, right: 1000 } } }, children: kids }] });
+    const blob = await D.Packer.toBlob(doc);
+    await saveFile(`${b.name || "简历"}-${a.company || ""}-${a.role || ""}.docx`.replace(/[\\/:*?"<>|]/g, "-"), blob);
+  } catch (e) { toast("生成 Word 失败：" + (e.message || errText(e)), true); }
+}
+
+/* ============ events ============ */
+async function setStatus(id, status) {
+  const a = appById(id); if (!a || a.status === status) return;
+  const history = [...(a.history || []), { status, at: new Date().toISOString() }];
+  await saveApp(a, { status, history });
+  if (EVENT_STAGES.has(status)) scheduleModal({ ...a, status }, status);
+}
+const ACT = {
+  githubLogout, uploadFiles: uploadCloudFiles,
+  previewFile: t => openCloudFile(t.dataset.id, true), downloadFile: t => openCloudFile(t.dataset.id),
+  localSettings, testAI, restoreData, localJobs,
+  backupData: async () => { const data = await api("/api/backup"); await saveFile("求职工作台备份-" + today() + ".json", JSON.stringify(data, null, 2)); },
+  copyField: async t => { await navigator.clipboard.writeText(S.copyFields[+t.dataset.i][1]); toast("已复制。"); },
+  go: t => { if (S.profileDirty && S.view === "profile" && !confirm("报名信息尚未保存，确定放弃修改？")) return; S.profileDirty = false; S.view = t.dataset.v; S.appId = null; try { localStorage.setItem("jd_view", S.view); } catch (e) {} window.scrollTo(0, 0); render(); },
+  newApp: () => newAppModal(),
+  closeModal, modalBg: (t, e) => { if (e.target === t) closeModal(); },
+  async createApp(t) {
+    const url = $("#na-url").value.trim(), company = $("#na-co").value.trim(), role = $("#na-role").value.trim(), jd = $("#na-jd").value.trim(), run = $("#na-run").checked;
+    if (!url && !company) { toast("至少填网址或公司名。", true); return; }
+    const co = t.dataset.co ? byId("companies", t.dataset.co) : null;
+    const id = uid();
+    const body = { company: company || (co && co.name) || "", role, url, jd, status: "待投递", history: [{ status: "待投递", at: new Date().toISOString() }], events: [], createdAt: new Date().toISOString(), updatedAt: new Date().toISOString() };
+    if (co) Object.assign(body, { companyId: co.id, category: co.category || "", nature: co.nature || "", industry: co.industry || "", deadline: co.deadline || "", city: co.cities || "" });
+    if (co) { const ex = []; if (co.notes && String(co.notes).trim() !== "无") ex.push({ id: uid(), text: (co.source === "飞书" ? "【飞书表备注】" : "【公司库备注】") + co.notes, at: new Date().toISOString() });
+      if (co.rawPost) ex.push({ id: uid(), text: "【招聘推送原文】" + co.rawPost, at: new Date().toISOString() });
+      if (co.roles) ex.push({ id: uid(), text: "【可投岗位】" + co.roles + (co.edu ? "；学历要求：" + co.edu : "") + (co.cohort ? "；届次：" + co.cohort : ""), at: new Date().toISOString() });
+      if (ex.length) body.extras = ex; if (!body.jd && co.rawPost) body.jd = co.rawPost; }
+    await db.set("applications/" + id, body);
+    closeModal(); S.appId = id; S.appTab = "match"; render();
+    if (run) {
+      if (!jd && url && S.hostOK) { await fetchJD(id); await sleep(300); }
+      if ((appById(id) || {}).jd) runMatch(id); else toast(S.hostOK ? "没读到 JD，请手动粘贴。" : "请把 JD 粘贴到「岗位描述」后点「分析匹配度」。");
+    }
+  },
+  openApp: (t, e) => { if (e.target.closest("select")) return; S.appId = t.dataset.id; S.appTab = "match"; window.scrollTo(0, 0); render(); },
+  closeApp: () => { S.appId = null; render(); },
+  appTab: t => { S.appTab = t.dataset.t; render(); },
+  editApp: t => { const a = appById(t.dataset.id); modal(`<h2>编辑投递信息</h2><div class="fields">${[["company", "公司"], ["role", "岗位"], ["city", "城市"], ["deadline", "截止日期"], ["url", "网址"], ["nature", "性质"], ["industry", "行业"]].map(([k, l]) => `<label class="f"><span>${l}</span><input type="text" id="ea-${k}" value="${esc(a[k] || "")}"></label>`).join("")}
+    <label class="f"><span>方向</span><select id="ea-category"><option value="">未分类</option>${DIRS.map(d => `<option ${a.category === d ? "selected" : ""}>${esc(d)}</option>`).join("")}</select></label></div>
+    <div class="row" style="justify-content:space-between"><button class="btn danger" data-act="delApp" data-id="${a.id}">删除这条投递</button><div class="row"><button class="btn ghost" data-act="closeModal">取消</button><button class="btn primary" data-act="saveAppInfo" data-id="${a.id}">保存</button></div></div>`); },
+  async saveAppInfo(t) { const a = appById(t.dataset.id); const patch = {}; for (const k of ["company", "role", "city", "deadline", "url", "nature", "industry", "category"]) patch[k] = $("#ea-" + k).value.trim(); await saveApp(a, patch); closeModal(); },
+  async delApp(t) { if (t.dataset.confirm !== "1") { t.dataset.confirm = "1"; t.textContent = "再点一次确认删除"; return; } const id = t.dataset.id; await db.del("applications/" + id); await db.del("tailored/" + id).catch(() => {}); await db.del("analyses/" + id).catch(() => {}); closeModal(); S.appId = null; render(); },
+  async saveJD(t) { const a = appById(t.dataset.id); await saveApp(a, { jd: $("#jd-" + a.id).value.trim() }); toast("JD 已保存。"); },
+  fetchJD: t => fetchJD(t.dataset.id),
+  runMatch: t => runMatch(t.dataset.id),
+  runTailor: t => runTailor(t.dataset.id),
+  exportMd: async t => { const a = appById(t.dataset.id); await saveFile(`${(S.d.profile || {}).basic?.name || "简历"}-${a.company}.md`.replace(/[\\/:*?"<>|]/g, "-"), resumeMd(a)); },
+  exportDocx: t => exportDocx(appById(t.dataset.id)),
+  async fillOpen(t) { const id = t.dataset.id; const url = $("#fill-url").value.trim(); if (!url) { toast("填一个网址。", true); return; } try { const tab = await openTab(url); S.fillTab = { app: id, tab }; toast("已在内置浏览器打开。需要登录的话请先登录。"); } catch (e) { toast(errText(e), true); } },
+  fillScan: t => fillScan(t.dataset.id),
+  fillApply: t => fillApply(t.dataset.id),
+  runDeep: t => runDeep(t.dataset.id),
+  stopDeep: () => deepCtl && deepCtl.abort(),
+  async queueDeep(t) { const a = appById(t.dataset.id); await db.set("queue/" + uid(), { type: "deep", applicationId: a.id, label: `面试深度分析：${a.company} ${a.role || ""}`, status: "pending", createdAt: new Date().toISOString() }); toast("已加入待处理任务，请在总览中点击开始分析。"); },
+  dropQ: async t => { await db.del("queue/" + t.dataset.id); },
+  schedule: t => scheduleModal(appById(t.dataset.id), appById(t.dataset.id).status),
+  scParse: () => parseNotice(),
+  async scSave(t) {
+    const s = S.sched; const a = appById(s.app); const manual = $("#sc-start").value; const mins = +$("#sc-mins").value || 60;
+    let start, end;
+    if (manual) { start = new Date(manual).toISOString(); end = new Date(new Date(manual).getTime() + mins * 6e4).toISOString(); }
+    else if (s.pick >= 0) { const x = s.slots[s.pick]; start = new Date(x.start).toISOString(); end = x.end ? new Date(x.end).toISOString() : new Date(new Date(x.start).getTime() + mins * 6e4).toISOString(); }
+    else { toast("选一个识别出的时间，或手动填写。", true); return; }
+    const ev = { id: uid(), type: s.stage, title: `${a.company} ${s.stage}${a.role ? "（" + a.role + "）" : ""}`, start, end, location: $("#sc-loc").value.trim(), note: $("#sc-note").value.trim() };
+    await saveApp(a, { events: [...(a.events || []), ev] });
+    closeModal();
+    if (t.dataset.dl === "1") await downloadEvents([ev], ev.title); else toast("日程已保存。");
+  },
+  async ics1(t) { const a = appById(t.dataset.app); const ev = (a.events || []).find(e => e.id === t.dataset.ev); if (ev) await downloadEvents([ev], ev.title || a.company); },
+  async icsAll() { const up = upcoming(); await downloadEvents(up.map(e => ({ ...e, title: e.title || `${e.app.company} ${e.type}` })), "求职日程-" + today()); },
+  async delEv(t) { const a = appById(t.dataset.app); await saveApp(a, { events: (a.events || []).filter(e => e.id !== t.dataset.ev) }); },
+  async addPos(t) { const a = appById(t.dataset.id); const g = k => ($("#ps-" + k + "-" + a.id).value || "").trim(); const title = g("t"); if (!title) { toast("先填岗位名称。", true); return; }
+    await saveApp(a, { positions: [...(a.positions || []), { id: uid(), order: g("o"), title, unit: g("u"), note: g("n"), status: "已投递", at: new Date().toISOString() }] }); },
+  async delPos(t) { if (t.dataset.confirm !== "1") { t.dataset.confirm = "1"; t.textContent = "确认删除"; return; } const a = appById(t.dataset.app); await saveApp(a, { positions: (a.positions || []).filter(x => x.id !== t.dataset.x) }); },
+  async addExtra(t) { const a = appById(t.dataset.id); const el = $("#ex-" + a.id); const text = (el.value || "").trim(); if (!text) { toast("先粘贴要补充的内容。", true); return; }
+    await saveApp(a, { extras: [...(a.extras || []), { id: uid(), text: text.slice(0, 20000), at: new Date().toISOString() }] }); el.value = ""; toast("已补充。之后的匹配分析、定制简历、面试准备都会用上；想让已有结果反映新信息，点对应的「重新…」。"); },
+  async delExtra(t) { if (t.dataset.confirm !== "1") { t.dataset.confirm = "1"; t.textContent = "确认删除"; return; } const a = appById(t.dataset.app); await saveApp(a, { extras: (a.extras || []).filter(x => x.id !== t.dataset.x) }); },
+  async saveNotes(t) { const a = appById(t.dataset.id); await saveApp(a, { notes: $("#notes-" + a.id).value }); toast("备注已保存。"); },
+  afStatus: t => { S.af.status = t.dataset.s; render(); },
+  cfDir: t => { S.cf.dir = t.dataset.d; render(); },
+  cfStar: () => { S.cf.star = !S.cf.star; render(); },
+  cfWait: () => { S.cf.wait = !S.cf.wait; render(); },
+  cfSrc: t => { S.cf.src = S.cf.src === t.dataset.s ? "" : t.dataset.s; render(); },
+  async star(t) { const c = byId("companies", t.dataset.id); if (!c) return; const on = !c.starred; t.textContent = on ? "★" : "☆"; t.setAttribute("aria-pressed", on);
+    try { await db.update("companies/" + c.id, { starred: on, starredAt: on ? new Date().toISOString() : "" }); } catch (e) { toast(errText(e), true); render(); } },
+  applyCo: t => { const c = byId("companies", t.dataset.id); newAppModal({ url: c.url, company: c.name, role: "", companyId: c.id }); },
+  toggleClamp: t => t.classList.toggle("open"),
+  addPost: () => postModal(),
+  runPost: () => runPost(),
+  addCo: () => coModal(), editCo: t => coModal(byId("companies", t.dataset.id)),
+  async saveCo(t) { const r = {}; for (const [k] of CO_FIELDS) r[k] = $("#co-" + k).value.trim(); if (!r.name) { toast("公司名必填。", true); return; } if (r.deadline) r.deadline = excelDate(r.deadline);
+    const id = t.dataset.id || hashId(r.name + "|" + (r.batch || "")); const old = byId("companies", id);
+    await db.set("companies/" + id, { ...(old || {}), ...r, source: (old && old.source) || "手动", verifiedAt: (old && old.verifiedAt) || "" }); closeModal(); },
+  async delCo(t) { if (t.dataset.confirm !== "1") { t.dataset.confirm = "1"; t.textContent = "再点一次确认删除"; return; } await db.del("companies/" + t.dataset.id); closeModal(); },
+  importCo: () => { const i = document.createElement("input"); i.type = "file"; i.accept = ".csv,.xlsx,.xls"; i.onchange = () => i.files[0] && importFile(i.files[0]); i.click(); },
+  feishu: () => feishuSync(),
+  organize: () => organize(),
+  addExp: () => expModal(), editExp: t => expModal(byId("experiences", t.dataset.id)),
+  async saveExp(t) {
+    const body = { type: $("#x-type").value, org: $("#x-org").value.trim(), role: $("#x-role").value.trim(), start: $("#x-start").value.trim(), end: $("#x-end").value.trim(), location: $("#x-loc").value.trim(), bullets: $("#x-bullets").value.split(/\n/).map(s => s.trim()).filter(Boolean), tags: [...document.querySelectorAll('[name="x-tag"]:checked')].map(i => i.value), updatedAt: new Date().toISOString() };
+    if (!body.org) { toast("机构必填。", true); return; }
+    await db.set("experiences/" + (t.dataset.id || uid()), body); closeModal();
+  },
+  async delExp(t) { if (t.dataset.confirm !== "1") { t.dataset.confirm = "1"; t.textContent = "再点一次确认删除"; return; } await db.del("experiences/" + t.dataset.id); closeModal(); },
+  viewResume: t => { const r = byId("resumes", t.dataset.id); modal(`<h2>${esc(r.title)}</h2><div class="log" style="max-height:60vh;color:var(--ink)">${esc(r.text)}</div><div class="row" style="justify-content:flex-end"><button class="btn" data-act="closeModal">关闭</button></div>`, true); },
+  async delResume(t) { if (t.dataset.confirm !== "1") { t.dataset.confirm = "1"; t.textContent = "确认删除"; return; } await db.del("resumes/" + t.dataset.id); },
+  async saveProfile(t) {
+    if (t.disabled) return;
+    const p = readProfileForm(); p.updatedAt = new Date().toISOString();
+    const fields = [...$("#pf").querySelectorAll("input,textarea,select,button")];
+    t.disabled = true; t.textContent = "保存中…"; fields.forEach(el => { el.disabled = true; });
+    try { await db.set("profile/main", p); S.profileDirty = false; toast("报名信息已保存。"); render(); }
+    finally { fields.forEach(el => { el.disabled = false; }); if (t.isConnected) { t.disabled = false; t.textContent = "保存"; } }
+  },
+  addEdu: () => { const p = readProfileForm(); p.education.push({}); S.d.profile = { ...(S.d.profile || {}), ...p }; S.profileDirty = true; render(true); },
+  delEdu: t => { const p = readProfileForm(); p.education.splice(+t.dataset.i, 1); S.d.profile = { ...(S.d.profile || {}), ...p }; S.profileDirty = true; render(true); },
+  addQA: () => { const p = readProfileForm(); p.qa.push({}); S.d.profile = { ...(S.d.profile || {}), ...p }; S.profileDirty = true; render(true); },
+  async profileFromResume() { if (S.profileDirty) { toast("先保存当前修改。", true); return; } await organize(); },
+};
+const CHANGE = {
+  status: t => setStatus(t.dataset.id, t.value),
+  engine: t => { S.engine = t.value; try { localStorage.setItem("jd_engine", t.value); } catch (e) {} },
+  cfOpen: t => { S.cf.open = t.checked; render(); },
+  cfSort: t => { S.cf.sort = t.value; render(); },
+  tsel: t => { const id = t.dataset.app; const set = new Set(S.tailorSel[id] || []); t.checked ? set.add(t.value) : set.delete(t.value); S.tailorSel[id] = [...set]; },
+  async tacc(t) { const td = S.d.tailored.find(x => x.id === t.dataset.app); if (!td) return; const accepted = { ...(td.accepted || {}), [t.dataset.k]: t.checked }; await db.update("tailored/" + td.id, { accepted }); },
+  fillOn: t => { if (S.fill) { S.fill.fills[+t.dataset.i].on = t.checked; render(); } },
+  scPick: t => { S.sched.pick = +t.value; },
+  resumeFiles: t => uploadResumes([...t.files]),
+};
+async function pdfPageImages(file, maxPages) {
+  await loadScript(LIBS.pdf); await loadScript(LIBS.pdfw);
+  const lib = window.pdfjsLib; lib.GlobalWorkerOptions.workerSrc = LIBS.pdfw;
+  const pdf = await lib.getDocument({ data: new Uint8Array(await file.arrayBuffer()) }).promise;
+  const out = [];
+  for (let i = 1; i <= Math.min(pdf.numPages, maxPages); i++) {
+    const page = await pdf.getPage(i);
+    const base = page.getViewport({ scale: 1 });
+    const vp = page.getViewport({ scale: Math.min(2.2, 1800 / Math.max(base.width, base.height)) });
+    const cv = document.createElement("canvas"); cv.width = Math.round(vp.width); cv.height = Math.round(vp.height);
+    const ctx = cv.getContext("2d"); ctx.fillStyle = "#fff"; ctx.fillRect(0, 0, cv.width, cv.height);
+    await page.render({ canvasContext: ctx, viewport: vp }).promise;
+    out.push(await new Promise(r => cv.toBlob(r, "image/jpeg", 0.88)));
+  }
+  return { images: out, total: pdf.numPages };
+}
+async function ocrImages(images, name) {
+  if (!S.sample) throw { code: "unavailable" };
+  const lim = await S.sample.limits().catch(() => null);
+  if (!lim || !lim.images) throw { message: "当前 AI 不支持图片识别，请上传 TXT 或 Markdown 文本。" };
+  const per = Math.max(1, Math.min(lim.images.maxCount || 1, 5));
+  let text = "";
+  for (let i = 0; i < images.length; i += per) {
+    const batch = images.slice(i, i + per);
+    setBusy("upload", `OCR 识别 ${name}：第 ${i + 1}–${i + batch.length} 页 / 共 ${images.length} 页…`);
+    const r = await S.sample(`这些图片是一份简历的第 ${i + 1} 到第 ${i + batch.length} 页。请逐字转录图片中的全部文字，保持原有的段落和条目顺序：标题单独成行，每个条目一行，表格按「字段：内容」逐行写出。不要总结、不要改写、不要补充图片里没有的内容；看不清的字用 [?] 标出。只输出转录文本。`, { images: batch.length === 1 ? batch[0] : batch, modelTier: "default", cache: false });
+    text += r.text + "\n\n";
+  }
+  return text;
+}
+async function uploadResumes(files) {
+  let saved = 0;
+  for (const f of files) {
+    setBusy("upload", "读取 " + f.name + "…");
+    try {
+      const original = await archiveFile(f);
+      const lower = f.name.toLowerCase();
+      let text = "", ocr = false;
+      if (/\.(png|jpe?g|webp)$/.test(lower)) { text = await ocrImages([f], f.name); ocr = true; }
+      else {
+        text = (await fileText(f)).replace(/\n{3,}/g, "\n\n").trim();
+        if (lower.endsWith(".pdf") && text.replace(/\s/g, "").length < 150) {
+          toast(f.name + " 是扫描件或图片版，改用 OCR 识别…");
+          const { images, total } = await pdfPageImages(f, 8);
+          text = await ocrImages(images, f.name); ocr = true;
+          if (total > 8) toast(`只识别了前 8 页（共 ${total} 页）。`);
+        }
+      }
+      text = text.replace(/\n{3,}/g, "\n\n").trim();
+      if (text.length < 30) { toast(f.name + " 没识别出文字，请检查文件或上传 TXT / Markdown。", true); continue; }
+      await db.set("resumes/" + uid(), { title: f.name, text: text.slice(0, 120000), ocr, ...(original ? { fileId: original.id } : {}), createdAt: new Date().toISOString() });
+      saved++;
+      if (ocr) toast(f.name + " 已通过 OCR 识别。建议点「查看」核对一遍，标 [?] 的是没看清的字。");
+    } catch (e) { toast(f.name + "：" + (e.message || errText(e)), true); }
+  }
+  setBusy("upload", false);
+  if (saved) toast(`已保存 ${saved} 份简历。点「AI 整理经历库」把它们合并成经历库。`);
+}
+
+/* ============ wiring ============ */
+document.addEventListener("click", e => { const t = e.target.closest("[data-act]"); if (!t) return; const f = ACT[t.dataset.act]; if (f) { if (t.tagName === "BUTTON" || t.tagName === "A") e.preventDefault(); Promise.resolve().then(() => f(t, e)).catch(error => toast(errText(error), true)); } });
+document.addEventListener("change", e => { const t = e.target.closest("[data-change]"); if (t && CHANGE[t.dataset.change]) Promise.resolve().then(() => CHANGE[t.dataset.change](t, e)).catch(error => toast(errText(error), true)); });
+document.addEventListener("input", e => {
+  const t = e.target;
+  if (t.closest("#pf")) { if (!S.profileDirty) { S.profileDirty = true; const h = $(".head .row"); if (h && !h.querySelector(".pill.warn")) h.insertAdjacentHTML("afterbegin", `<span class="pill warn">有未保存的修改</span>`); } return; }
+  const k = t.dataset && t.dataset.input;
+  if (k === "afq" || k === "cfq") { if (e.isComposing || S.composing) return; scheduleSearch(t, k); }
+});
+/* 中文输入法：拼音组字期间不重绘（重绘会替换输入框，打断组字），组字结束后再搜索 */
+function scheduleSearch(t, k) {
+  (k === "afq" ? S.af : S.cf).q = t.value;
+  clearTimeout(S._searchT);
+  S._searchT = setTimeout(() => {
+    if (S.composing) return;
+    const cur = $(`[data-input="${k}"]`); const pos = cur && document.activeElement === cur ? cur.selectionStart : null;
+    render();
+    const el = $(`[data-input="${k}"]`);
+    if (el) { el.focus(); const p = pos == null ? el.value.length : Math.min(pos, el.value.length); el.setSelectionRange(p, p); }
+  }, 300);
+}
+document.addEventListener("compositionstart", e => { if (e.target.dataset && /^(afq|cfq)$/.test(e.target.dataset.input || "")) { S.composing = true; clearTimeout(S._searchT); } });
+document.addEventListener("compositionend", e => { const k = e.target.dataset && e.target.dataset.input; if (k === "afq" || k === "cfq") { S.composing = false; scheduleSearch(e.target, k); if (S._pendingRender) { S._pendingRender = false; } } });
+document.addEventListener("keydown", e => { if (e.key === "Escape" && $("#modal").innerHTML) closeModal(); });
+document.addEventListener("dragover", e => { const d = e.target.closest && e.target.closest("#drop"); if (d) { e.preventDefault(); d.classList.add("over"); } });
+document.addEventListener("dragleave", e => { const d = e.target.closest && e.target.closest("#drop"); if (d) d.classList.remove("over"); });
+document.addEventListener("drop", e => { const d = e.target.closest && e.target.closest("#drop"); if (d) { e.preventDefault(); d.classList.remove("over"); uploadResumes([...e.dataTransfer.files]); } });
+
+S.engine = "bing"; try { S.engine = localStorage.getItem("jd_engine") || "bing"; } catch (e) {}
+async function boot() {
+  render();
+  const c = window.claude;
+  if (!c && (location.hostname.endsWith(".github.io") || new URLSearchParams(location.search).has("github"))) { githubLogin(); return; }
+  if (!c || !c.use) { await localBoot(); return; }
+  const get = n => c.use(n).catch(() => null);
+  const [dbx, sample, dl, user] = await Promise.all([get("db"), get("sample"), get("downloads"), get("user")]);
+  Object.assign(S, { db: dbx, sample, dl, user });
+  if (!dbx) { S.fatal = "需要登录 claude.ai 才能读取你的求职数据。"; render(); return; }
+  subscribe();
+  S.ready = true; render();
+  const mcp = await get("mcp"); S.mcp = mcp;
+  if (mcp) { try { const r = await mcp.listTools(); S.hostOK = (r.servers || []).some(s => s.server === HOST); } catch (e) { S.hostOK = false; } render(); }
+}
+boot();
+</script>
