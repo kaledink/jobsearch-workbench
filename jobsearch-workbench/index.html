@@ -1200,10 +1200,10 @@ function githubLogin(message = "") {
   $("#nav").innerHTML = ""; $("#railfoot").textContent = "私人数据 · GitHub 私有仓库";
   $("#main").innerHTML = `<section class="sheet" style="max-width:560px;margin:5vh auto"><h1>连接你的私人工作台</h1><p>记录、原始图片和文件保存在你指定的 GitHub 私有仓库。网页程序不包含个人数据。</p>
     <form id="github-login" class="stack"><label class="f"><span>GitHub 用户名</span><input id="gh-owner" value="${esc(saved.owner || "kaledink")}" required autocomplete="username"></label>
-    <label class="f"><span>私人数据仓库名（必须为 Private）</span><input id="gh-repo" value="${esc(saved.repo || "jobsearch-workbench-data")}" required></label>
+    <label class="f"><span>私人数据仓库名（必须为 Private）</span><input id="gh-repo" value="${esc(saved.repo || "dataofjobmaketing")}" required></label>
     <label class="f"><span>GitHub 细粒度访问令牌</span><input id="gh-token" type="password" required autocomplete="off" placeholder="仅限私人数据仓库，Contents 读写；AI 另需 Models 读取"></label>
     <p class="note">令牌仅保存在本页内存中，退出或刷新后需重新输入，不写入仓库。</p>
-    <p class="note">首次使用：<a href="https://github.com/new" target="_blank" rel="noopener noreferrer">创建私有数据仓库</a>（可命名 jobsearch-workbench-data），再<a href="https://github.com/settings/personal-access-tokens/new" target="_blank" rel="noopener noreferrer">创建仅授权该仓库的细粒度令牌</a>，选择 Contents 读写；AI 另需 Models 读取。不要把令牌发到聊天中。</p>
+    <p class="note">首次使用：<a href="https://github.com/new" target="_blank" rel="noopener noreferrer">创建私有数据仓库</a>（可命名 dataofjobmaketing），再<a href="https://github.com/settings/personal-access-tokens/new" target="_blank" rel="noopener noreferrer">创建仅授权该仓库的细粒度令牌</a>，选择 Contents 读写；AI 另需 Models 读取。不要把令牌发到聊天中。</p>
     <button class="btn primary" type="submit">登录并读取云端数据</button><p id="gh-error" role="alert">${esc(message)}</p></form></section>`;
   $("#github-login").onsubmit = async e => {
     e.preventDefault(); const button = e.target.querySelector("button"); button.disabled = true;
