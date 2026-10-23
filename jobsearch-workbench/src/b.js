@@ -47,7 +47,7 @@ V.dash = () => {
   const up = upcoming();
   const week = up.filter(e => new Date(e.start) - Date.now() < 7 * 864e5);
   const appliedNames = new Set(apps.map(a => a.company));
-  const soon = S.d.companies.filter(c => { const n = daysLeft(c.deadline); return n !== null && n >= 0 && n <= 10 && !appliedNames.has(c.name); }).sort((a, b) => daysLeft(a.deadline) - daysLeft(b.deadline));
+  const soon = S.d.companies.filter(c => { const d = companyDeadline(c); const n = daysLeft(d.deadline); return c.eligibility !== "review" && deadlineInstant(d) >= Date.now() && n !== null && n >= 0 && n <= 10 && !appliedNames.has(c.name); }).sort(deadlineCompare);
   const pend = S.d.queue.filter(q => q.status !== "done");
   const hasProfile = !!(S.d.profile && S.d.profile.basic && S.d.profile.basic.name);
   const steps = [
@@ -69,8 +69,8 @@ V.dash = () => {
   </div>
   <div class="grid2">
     <section class="sheet"><h2>接下来的日程</h2>${up.length ? `<div class="list">${up.slice(0, 6).map(evRow).join("")}</div>` : `<p class="note">还没有笔试或面试。投递状态改成「笔试」「一面」等阶段时，会弹窗让你确认时间并生成日历文件。</p>`}</section>
-    <section class="sheet"><h2>截止临近</h2>${soon.length ? `<div class="list">${soon.slice(0, 7).map(c => `<div class="li"><div class="grow"><b>${esc(c.name)}</b><div class="note">${esc(c.batch || "")} ${esc(c.roles || "").slice(0, 40)}</div></div><span class="note mono">${esc(mmdd(c.openDate))} → ${esc(mmdd(c.deadline))}</span>${dlPill(c.deadline)}<button class="btn sm" data-act="applyCo" data-id="${c.id}">投递</button></div>`).join("")}</div>` : `<p class="note">10 天内没有要截止、且你还没投的公司。</p>`}</section>
-    <section class="sheet"><h2>岗位更新</h2>${meta.lastDaily ? `<p class="note mono">最近一次：${esc(meta.lastDaily)}</p>${md(meta.dailySummary || "")}` : `<p class="note">按你的目标方向检索公开招聘信息，结果需核对官方原文。不会在后台自动运行。</p>`}
+    <section class="sheet"><h2>截止临近</h2>${soon.length ? `<div class="list">${soon.slice(0, 7).map(c => `<div class="li"><div class="grow"><b>${esc(c.name)}</b><div class="note">${esc(c.batch || "")} ${esc(c.roles || "").slice(0, 40)}</div></div><span class="note mono">${esc(mmdd(c.openDate))} → ${esc(mmdd(c.deadline))}</span>${urgencyPill(c) || dlPill(companyDeadline(c).deadline)}<button class="btn sm" data-act="applyCo" data-id="${c.id}">投递</button></div>`).join("")}</div>` : `<p class="note">10 天内没有要截止、且你还没投的公司。</p>`}</section>
+    <section class="sheet"><h2>岗位更新 · 截止优先</h2><p class="note">推荐先核实匹配条件，再按报名截止时间从近到远排列；3 天内截止标为紧急，长期招聘排后。</p>${meta.lastDaily ? `<p class="note mono">最近成功更新：${esc(meta.lastDaily)}</p>` : `<p class="note">每日任务尚未完成首次成功更新。</p>`}${meta.lastAttempt ? `<p class="note">最近尝试：${esc(meta.lastAttempt)} · ${meta.lastRunStatus === "ok" ? "完成" : meta.lastRunStatus === "partial" ? "部分完成" : "未完成"}</p>` : ""}${md(meta.dailySummary || "")}${meta.dailyQualified !== undefined ? `<p class="note">本次明确匹配 ${meta.dailyQualified} 条，待核实 ${meta.dailyReview || 0} 条。</p>` : ""}
     ${S.local ? `<button class="btn" data-act="localJobs" ${S.busy.jobs || S.aiStatus?.provider !== "codex" ? "disabled" : ""}>${S.busy.jobs ? "检索中…" : "用 Codex 检索岗位"}</button>` : ""}</section>
     <section class="sheet"><h2>待处理的分析</h2>${pend.length ? `<div class="list">${pend.map(q => `<div class="li"><div class="grow">${esc(q.label || q.type)}</div>${S.local ? `<button class="btn sm" data-act="runDeep" data-id="${esc(q.applicationId)}" ${S.busy["prep-" + q.applicationId] ? "disabled" : ""}>开始分析</button>` : ""}<button class="btn ghost sm" data-act="dropQ" data-id="${q.id}">撤销</button></div>`).join("")}</div>` : `<p class="note">没有排队的任务。</p>`}</section>
   </div>`;
@@ -103,40 +103,42 @@ V.companies = () => {
   const f = S.cf;
   let list = S.d.companies.slice();
   if (f.dir) list = list.filter(c => (c.category || "") === f.dir);
-  if (f.open) list = list.filter(c => { const n = daysLeft(c.deadline); return c.status !== "closed" && (n === null || n >= 0); });
+  if (f.open) list = list.filter(c => c.status !== "closed" && deadlineInstant(companyDeadline(c)) >= Date.now());
+  if (f.eligibility) list = list.filter(c => f.eligibility === "review" ? c.eligibility === "review" || c.vacancies?.some(v => v.eligibility === "review" && deadlineInstant(v) >= Date.now()) : isAutoCompany(c) && c.eligibility === "qualified");
   if (f.q) { const q = f.q.toLowerCase(); list = list.filter(c => [c.name, c.industry, c.roles, c.cities, c.nature, c.notes].join(" ").toLowerCase().includes(q)); }
   if (f.star) list = list.filter(c => c.starred);
   if (f.wait) list = list.filter(c => c.status === "notStarted" || c.status === "watch");
-  if (f.src === "claude") list = list.filter(c => ["Claude", "Codex"].includes(c.source));
+  if (f.src === "claude") list = list.filter(c => isAutoCompany(c));
   else if (f.src === "feishu") list = list.filter(c => c.source === "飞书");
   else if (f.src === "post") list = list.filter(c => c.source === "推送" || c.source === "手动");
-  const byDl = (a, b) => (daysLeft(a.deadline) ?? 9999) - (daysLeft(b.deadline) ?? 9999);
-  if (f.sort === "new") list.sort((a, b) => { const ca = ["Claude", "Codex"].includes(a.source), cb = ["Claude", "Codex"].includes(b.source); if (ca !== cb) return ca ? -1 : 1; if (ca) { const d = addedKey(b).localeCompare(addedKey(a)); if (d) return d; } return byDl(a, b); });
+  const byDl = deadlineCompare;
+  if (f.sort === "new") list.sort((a, b) => { const ca = isAutoCompany(a), cb = isAutoCompany(b); if (ca !== cb) return ca ? -1 : 1; if (ca) { const d = addedKey(b).localeCompare(addedKey(a)); if (d) return d; } return byDl(a, b); });
   else if (f.sort === "fit") list.sort((a, b) => ((fitOf(b) || {}).score ?? -1) - ((fitOf(a) || {}).score ?? -1) || byDl(a, b));
   else list.sort(byDl);
   const starN = S.d.companies.filter(c => c.starred).length;
-  const latest = S.d.companies.filter(c => ["Claude", "Codex"].includes(c.source)).map(addedKey).sort().pop() || "";
+  const latest = S.d.companies.filter(c => isAutoCompany(c)).map(addedKey).sort().pop() || "";
   const applied = new Map(S.d.applications.map(a => [a.company, a]));
-  const src = c => ["Claude", "Codex"].includes(c.source) ? `<span class="pill acc">AI 补充</span>` : c.source === "飞书" ? `<span class="pill">飞书</span>` : `<span class="pill">${esc(c.source || "手动")}</span>`;
-  return `<div class="head"><div><h1>公司库</h1><p class="sub">导入公司表、手动添加，或从招聘推送提取岗位。</p></div>
+  const src = c => isAutoCompany(c) ? `<span class="pill acc">AI 补充</span>` : c.source === "飞书" ? `<span class="pill">飞书</span>` : `<span class="pill">${esc(c.source || "手动")}</span>`;
+  return `<div class="head"><div><h1>公司库</h1><p class="sub">优先显示临近报名截止的匹配岗位；条件不明确的机会单列待核实。</p></div>
     <div class="row">${S.hostOK ? `<button class="btn primary" data-act="feishu" ${S.busy.import ? "disabled" : ""}>${S.busy.import ? `<span class="spin"></span> ${esc(typeof S.busy.import === "string" ? S.busy.import : "同步中…")}` : "从飞书同步"}</button>` : `<span class="note">飞书表可导出后导入</span>`}<button class="btn" data-act="importCo">导入 CSV / Excel</button><button class="btn" data-act="addPost">从招聘推送添加</button><button class="btn" data-act="addCo">手动添加</button></div></div>
   <div class="row" style="margin-bottom:12px"><input type="search" placeholder="搜索单位、岗位、城市、备注" value="${esc(f.q)}" data-input="cfq" style="max-width:280px">
     <div class="row">${["", ...DIRS].map(d => `<button class="chip" data-act="cfDir" data-d="${esc(d)}" aria-pressed="${f.dir === d}">${d || "全部方向"}</button>`).join("")}</div>
     <button class="chip" data-act="cfStar" aria-pressed="${f.star}">★ 只看标星 <span class="mono">${starN}</span></button>
     <button class="chip" data-act="cfWait" aria-pressed="${f.wait}">未开放·关注中 <span class="mono">${S.d.companies.filter(c => c.status === "notStarted" || c.status === "watch").length}</span></button>
-    <button class="chip" data-act="cfSrc" data-s="claude" aria-pressed="${f.src === "claude"}">AI 新增 <span class="mono">${S.d.companies.filter(c => ["Claude", "Codex"].includes(c.source)).length}</span></button>
+    <button class="chip" data-act="cfSrc" data-s="claude" aria-pressed="${f.src === "claude"}">AI 新增 <span class="mono">${S.d.companies.filter(c => isAutoCompany(c)).length}</span></button>
+    <button class="chip" data-act="cfEligibility" data-e="qualified" aria-pressed="${f.eligibility === "qualified"}">每日推荐</button><button class="chip" data-act="cfEligibility" data-e="review" aria-pressed="${f.eligibility === "review"}">待核实</button>
     <button class="chip" data-act="cfSrc" data-s="feishu" aria-pressed="${f.src === "feishu"}">飞书 <span class="mono">${S.d.companies.filter(c => c.source === "飞书").length}</span></button>
     <button class="chip" data-act="cfSrc" data-s="post" aria-pressed="${f.src === "post"}">我添加 <span class="mono">${S.d.companies.filter(c => c.source === "推送" || c.source === "手动").length}</span></button>
     <label class="row note"><input type="checkbox" data-change="cfOpen" ${f.open ? "checked" : ""}> 只看未截止</label>
-    <label class="row note">排序 <select data-change="cfSort" style="width:auto"><option value="new" ${f.sort === "new" ? "selected" : ""}>AI 新增优先</option><option value="dl" ${f.sort === "dl" ? "selected" : ""}>截止最近优先</option><option value="fit" ${f.sort === "fit" ? "selected" : ""}>匹配度最高</option></select></label></div>
+    <label class="row note">排序 <select data-change="cfSort" style="width:auto"><option value="new" ${f.sort === "new" ? "selected" : ""}>AI 新增优先</option><option value="dl" ${f.sort === "dl" ? "selected" : ""}>截止最近优先（默认）</option><option value="fit" ${f.sort === "fit" ? "selected" : ""}>匹配度最高</option></select></label></div>
   ${list.length ? `<div class="tbl-wrap"><table><thead><tr><th>公司</th><th>方向 / 性质</th><th>批次 · 岗位</th><th>匹配度</th><th>城市</th><th>报名时间<div class="t2" style="font-weight:400">开始 → 截止</div></th><th>来源</th><th></th></tr></thead><tbody>
-  ${list.map(c => { const a = applied.get(c.name); return `<tr>
+  ${list.map(c => { const a = applied.get(c.name); const cd = companyDeadline(c); return `<tr>
     <td><div class="row" style="flex-wrap:nowrap;align-items:flex-start;gap:8px"><button class="star" data-act="star" data-id="${c.id}" aria-pressed="${!!c.starred}" aria-label="${c.starred ? "取消标星" : "标星"}" title="${c.starred ? "取消标星" : "觉得合适就标星"}">${c.starred ? "★" : "☆"}</button>
-      <div><div class="t1">${c.url ? `<a href="${safeURL(c.url)}" target="_blank" rel="noopener">${esc(c.name)}</a>` : esc(c.name)}${["Claude", "Codex"].includes(c.source) && latest && addedKey(c) === latest ? ` <span class="pill acc">新</span>` : ""}</div><div class="t2">${esc(c.industry || "")}</div>${c.group ? `<span class="pill acc" style="margin-top:2px">${esc(c.group)}</span>` : ""}${c.myNote || c.myLink ? `<div class="row" style="gap:6px;margin-top:2px">${c.myNote ? `<span class="pill warn">${esc(c.myNote)}</span>` : ""}${c.myLink ? `<a class="t2" href="${safeURL(c.myLink)}" target="_blank" rel="noopener">我的链接</a>` : ""}</div>` : ""}${c.notes && String(c.notes).trim() !== "无" ? `<div class="t2 clamp" title="${esc(c.notes)}" data-act="toggleClamp">${esc(c.notes)}</div>` : ""}</div></div></td>
+      <div><div class="t1">${c.url ? `<a href="${safeURL(c.url)}" target="_blank" rel="noopener">${esc(c.name)}</a>` : esc(c.name)}${isAutoCompany(c) && latest && addedKey(c) === latest ? ` <span class="pill acc">新</span>` : ""}</div><div class="t2">${esc(c.industry || "")}</div>${c.group ? `<span class="pill acc" style="margin-top:2px">${esc(c.group)}</span>` : ""}${c.myNote || c.myLink ? `<div class="row" style="gap:6px;margin-top:2px">${c.myNote ? `<span class="pill warn">${esc(c.myNote)}</span>` : ""}${c.myLink ? `<a class="t2" href="${safeURL(c.myLink)}" target="_blank" rel="noopener">我的链接</a>` : ""}</div>` : ""}${c.notes && String(c.notes).trim() !== "无" ? `<div class="t2 clamp" title="${esc(c.notes)}" data-act="toggleClamp">${esc(c.notes)}</div>` : ""}</div></div></td>
     <td><div>${esc(c.category || "未分类")}</div><div class="t2">${esc(c.nature || "")}</div></td>
-    <td><div>${esc(c.batch || "")}${c.edu ? ` <span class="t2">${esc(c.edu)}</span>` : ""}</div><div class="t2">${esc(String(c.roles || "").slice(0, 60))}</div></td>
+    <td><div>${esc(c.batch || "")}${c.edu ? ` <span class="t2">${esc(c.edu)}</span>` : ""}</div><div class="t2">${esc(String(c.roles || "").slice(0, 60))}</div>${c.vacancies?.length ? `<button class="btn sm" data-act="companyJobs" data-id="${esc(c.id)}">查看 ${c.vacancies.length} 个岗位及条件</button>` : ""}${c.eligibility === "review" ? `<span class="pill warn">待核实，不计入每日推荐</span>` : ""}</td>
     <td style="max-width:220px">${fitOf(c) ? `<span class="score ${scoreCls(fitOf(c).score)}">${fitOf(c).score}</span><div class="t2">${esc(fitOf(c).reason || "")}</div>` : `<span class="note">—</span>`}</td>
-    <td class="t2" style="max-width:140px">${esc(String(c.cities || "").slice(0, 40))}</td><td>${periodCell(c)}</td>
+    <td class="t2" style="max-width:140px">${esc(String(c.cities || "").slice(0, 40))}</td><td>${periodCell(cd)}${cd.deadlineTime ? `<div class="t2">${esc(cd.deadlineTime)} 截止（北京时间）</div>` : ""}${urgencyPill(c)}</td>
     <td>${src(c)}${c.feishuUrl ? ` <a class="t2" href="${safeURL(c.feishuUrl)}" target="_blank" rel="noopener">飞书原表</a>` : ""}${c.noExam ? `<div><span class="pill ok">免笔试</span></div>` : ""}${c.verifiedAt ? `<div class="t2 mono">核实 ${esc(c.verifiedAt.slice(5, 10))}</div>` : ""}</td>
     <td><div class="row">${a ? `<button class="btn sm" data-act="openApp" data-id="${a.id}">${esc(a.status || "待投递")}</button>` : `<button class="btn sm primary" data-act="applyCo" data-id="${c.id}">投递</button>`}<button class="btn ghost sm" data-act="editCo" data-id="${c.id}">编辑</button></div></td></tr>`; }).join("")}
   </tbody></table></div><p class="note">共 ${list.length} 家（库内 ${S.d.companies.length} 家）</p>` : `<div class="empty"><h3>${S.d.companies.length ? "没有符合筛选的公司" : "公司库是空的"}</h3><p>在飞书里把表格导出为 Excel 或 CSV，点「导入 CSV / Excel」；同名公司同批次会自动合并更新。</p></div>`}`;

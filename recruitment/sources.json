@@ -1,0 +1,41 @@
+{
+  "indexes": [
+    "https://rsj.beijing.gov.cn/xxgk/gkzp/",
+    "https://hr.pku.edu.cn/",
+    "https://jobs.tsinghua.edu.cn/",
+    "https://hr.bnu.edu.cn/",
+    "https://hr.fudan.edu.cn/",
+    "https://hr.sjtu.edu.cn/",
+    "https://hrss.gd.gov.cn/zwgk/sydwzp/"
+  ],
+  "searchTerms": [
+    "政府机关 事业单位 选调",
+    "高校 教职 辅导员 博士后",
+    "央企 国企 总部 综合管理 战略研究"
+  ],
+  "officialSuffixes": [
+    "gov.cn",
+    "edu.cn",
+    "gov.hk",
+    "edu.hk",
+    "sasac.gov.cn",
+    "crhc.cn",
+    "citic.com",
+    "citicbank.com",
+    "cscec.com",
+    "chinalife.com.cn",
+    "cmhk.com",
+    "spic.com.cn",
+    "chnenergy.com.cn",
+    "sgcc.com.cn",
+    "sinopec.com",
+    "petrochina.com.cn",
+    "cnpc.com.cn",
+    "cdb.com.cn",
+    "adbc.com.cn",
+    "ccb.com",
+    "boc.cn",
+    "psbc.com",
+    "icbc.com.cn"
+  ]
+}

@@ -418,6 +418,13 @@ async function setStatus(id, status) {
   if (EVENT_STAGES.has(status)) scheduleModal({ ...a, status }, status);
 }
 const ACT = {
+  cfEligibility: t => { S.cf.eligibility = S.cf.eligibility === t.dataset.e ? "" : t.dataset.e; render(); },
+  companyJobs: t => {
+    const c = byId("companies", t.dataset.id); if (!c) return;
+    const rows = (c.vacancies || []).slice().sort((a, b) => (a.eligibility === "review") - (b.eligibility === "review") || deadlineCompare(a, b));
+    modal(`<h2>${esc(c.name)} · 招聘岗位</h2><div class="stack">${rows.map(v => `<section class="sheet"><h3>${esc(v.title)} · ${esc(v.city)}</h3><p class="note">${esc(v.department || "")} ${esc(v.batch || c.batch || "")}</p><div class="row">${v.eligibility === "review" ? `<span class="pill warn">待核实</span>` : `<span class="pill ok">条件已匹配</span>`}${dlPill(v.deadline)}${urgencyPill(v)}</div>${md(v.reason || "")}${(v.doubts || []).length ? `<p class="callout">待核实：${esc(v.doubts.join("；"))}</p>` : ""}<p class="note">截止原文：${esc(v.deadlineText || v.evidence?.deadline || "未注明")}</p><p class="note">核验时间：${esc(v.checkedAt || "")}</p><a href="${safeURL(v.sourceURL)}" target="_blank" rel="noopener noreferrer">查看官方公告</a><div class="row" style="margin-top:10px"><button class="btn" data-act="applyVacancy" data-co="${esc(c.id)}" data-id="${esc(v.id)}">建立该岗位投递记录</button></div></section>`).join("")}</div><button class="btn" data-act="closeModal">关闭</button>`, true);
+  },
+  applyVacancy: t => { const c = byId("companies", t.dataset.co); const v = c?.vacancies?.find(v => v.id === t.dataset.id); if (v) newAppModal({ company: c.name, role: v.title, url: v.sourceURL, companyId: c.id }); },
   githubLogout, uploadFiles: uploadCloudFiles,
   previewFile: t => openCloudFile(t.dataset.id, true), downloadFile: t => openCloudFile(t.dataset.id),
   localSettings, testAI, restoreData, localJobs,

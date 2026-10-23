@@ -23,7 +23,7 @@ const S = {
   db: null, sample: null, mcp: null, dl: null, user: null, hostOK: false, ready: false, fatal: "",
   d: { profile: null, meta: null, resumes: [], experiences: [], companies: [], applications: [], tailored: [], analyses: [], queue: [] },
   view: "dash", appId: null, appTab: "match",
-  cf: { q: "", dir: "", open: true, star: false, sort: "new", src: "", wait: false }, af: { q: "", status: "" },
+  cf: { q: "", dir: "", open: true, star: false, sort: "dl", src: "", wait: false, eligibility: "" }, af: { q: "", status: "" },
   busy: {}, logs: {}, profileDirty: false, tailorSel: {},
 };
 try { const v = localStorage.getItem("jd_view"); if (v && VIEWS.some(x => x[0] === v)) S.view = v; } catch (e) {}
@@ -34,11 +34,28 @@ const esc = s => String(s ?? "").replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": 
 const safeURL = s => esc(/^https?:\/\//i.test(String(s || "")) ? s : "#");
 const uid = () => Date.now().toString(36) + Math.random().toString(36).slice(2, 8);
 const sleep = ms => new Promise(r => setTimeout(r, ms));
-const today = () => { const d = new Date(); return ymd(d); };
+const today = () => { const parts = Object.fromEntries(new Intl.DateTimeFormat("en-CA", { timeZone: "Asia/Shanghai", year: "numeric", month: "2-digit", day: "2-digit" }).formatToParts(new Date()).map(p => [p.type, p.value])); return `${parts.year}-${parts.month}-${parts.day}`; };
 function ymd(d) { const p = n => String(n).padStart(2, "0"); return d.getFullYear() + "-" + p(d.getMonth() + 1) + "-" + p(d.getDate()); }
 function hm(d) { const p = n => String(n).padStart(2, "0"); return p(d.getHours()) + ":" + p(d.getMinutes()); }
 function hashId(str) { let h1 = 0x811c9dc5, h2 = 0; for (const ch of String(str)) { const c = ch.codePointAt(0); h1 = Math.imul(h1 ^ c, 16777619) >>> 0; h2 = (h2 * 31 + c) >>> 0; } return "c" + h1.toString(36) + h2.toString(36); }
-function daysLeft(dstr) { if (!dstr || !/^\d{4}-\d{2}-\d{2}/.test(dstr)) return null; const t = new Date(dstr.slice(0, 10) + "T23:59:59"); return Math.ceil((t - Date.now()) / 864e5); }
+function daysLeft(dstr) { if (!dstr || !/^\d{4}-\d{2}-\d{2}$/.test(dstr.slice(0, 10))) return null; const t = Date.parse(dstr.slice(0, 10) + "T00:00:00+08:00"); return Number.isFinite(t) ? Math.round((t - Date.parse(today() + "T00:00:00+08:00")) / 864e5) : null; }
+function deadlineInstant(row) { if (!row?.deadline || daysLeft(row.deadline) === null) return Infinity; const t = Date.parse(row.deadline.slice(0, 10) + "T" + (row.deadlineTime || "23:59:59") + "+08:00"); return Number.isFinite(t) ? t : Infinity; }
+function companyDeadline(company) {
+  if (!company.vacancies?.length) return company;
+  const active = company.vacancies.filter(v => deadlineInstant(v) >= Date.now());
+  const qualified = active.filter(v => v.eligibility === "qualified");
+  const pool = qualified.length ? qualified : active.length ? active : company.vacancies;
+  return pool.slice().sort((a, b) => deadlineInstant(a) < deadlineInstant(b) ? -1 : deadlineInstant(a) > deadlineInstant(b) ? 1 : 0)[0] || company;
+}
+function deadlineCompare(a, b) {
+  const ar = a.eligibility === "review", br = b.eligibility === "review";
+  if (ar !== br) return ar ? 1 : -1;
+  const ad = deadlineInstant(companyDeadline(a)), bd = deadlineInstant(companyDeadline(b));
+  if (ad !== bd) return ad < bd ? -1 : 1;
+  return ((fitOf(b) || {}).score ?? b.score ?? -1) - ((fitOf(a) || {}).score ?? a.score ?? -1) || (String(b.cities || b.city || "").includes("北京") ? 1 : 0) - (String(a.cities || a.city || "").includes("北京") ? 1 : 0);
+}
+const isAutoCompany = c => ["Claude", "Codex", "每日招聘"].includes(c.source);
+function urgencyPill(row) { const deadline = companyDeadline(row); if (deadlineInstant(deadline) < Date.now()) return `<span class="pill bad">已截止</span>`; const n = daysLeft(deadline.deadline); return n !== null && n >= 0 && n <= 3 ? `<span class="pill bad">${n === 0 ? "今天截止" : n + " 天内截止"} · 紧急</span>` : ""; }
 function scoreCls(s) { return s >= 75 ? "hi" : s >= 55 ? "mid" : "lo"; }
 function statusPill(s) {
   const cls = s === "Offer" ? "ok" : (s === "已拒绝" || s === "已放弃") ? "bad" : EVENT_STAGES.has(s) ? "warn" : s === "已投递" ? "acc" : "";
