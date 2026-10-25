@@ -493,6 +493,8 @@ def run(client, config, force=False, snapshot=None):
     priority_urls, priority_stats = discover_priority(config, year, old_meta.get('priorityCursor', 0), extras)
     urls, stats = discover(config, year)
     stats.update(priority_stats)
+    stats['sourceSuccesses'] += len(priority_stats['priorityChecked'])
+    stats['sourceFailures'] += len(priority_stats['priorityFailed'])
     urls = list(dict.fromkeys(priority_urls + urls))
     pages = []
     with concurrent.futures.ThreadPoolExecutor(max_workers=3) as pool:

@@ -21,7 +21,7 @@ def run():
     expect(page.locator('tbody tr').nth(0)).to_contain_text('普通单位')
     expect(page.locator('tbody tr').nth(1)).to_contain_text('重点央企 #99')
     expect(page.locator('tbody tr').nth(2)).to_contain_text('重点央企 #72')
-    expect(page.locator('tbody tr').nth(3)).to_contain_text('重点央企 #8')
+    expect(page.locator('tbody tr').nth(3)).to_contain_text('重点名单 #8')
     expect(page.locator('tbody tr').nth(3)).to_contain_text('疑似成员单位，待核实')
     page.locator('[data-act="cfPriority"]').click();expect(page.locator('tbody tr')).to_have_count(3)
     page.locator('[data-act="priorityCompanies"]').click();expect(page.locator('#modal .li')).to_have_count(100)

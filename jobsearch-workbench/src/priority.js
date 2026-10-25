@@ -14,7 +14,7 @@ function priorityGroupOf(row) {
   if (row.vacancies?.length) { const groups = row.vacancies.map(priorityGroupOf).filter(Boolean); if (groups.length && groups.every(g => g.number === groups[0].number)) return groups[0]; }
   return null;
 }
-function priorityBadge(row) { const g = priorityGroupOf(row); return g ? `<span class="pill priority-badge">重点央企 #${g.number}</span><div class="t2">${esc(g.relationship)} · ${esc(g.name)}</div>` : ""; }
+function priorityBadge(row) { const g = priorityGroupOf(row); if (!g) return ""; const uncertain = g.relationship.startsWith("疑似"); return `<span class="pill ${uncertain ? "warn" : "priority-badge"}">${uncertain ? "重点名单" : "重点央企"} #${g.number}${uncertain ? " · 归属待核实" : ""}</span><div class="t2">${esc(g.relationship)} · ${esc(g.name)}</div>`; }
 function priorityCompaniesModal() {
   const meta = S.d.meta || {};
   modal(`<h2>重点企业名单 · 100 家</h2><p class="note">按你提供的序号标注；名单本身不代表正在招聘。校招信息核验后进入公司库，子公司不等同于集团总部。</p><div class="list">${PRIORITY_COMPANIES.map(g => { const count = S.d.companies.filter(c => priorityGroupOf(c)?.number === g.number).length; const check = meta.priorityChecked?.includes(g.number) ? "本轮已访问官网入口" : meta.priorityFailed?.includes(g.number) ? "本轮官网入口未能读取" : "等待重点轮询"; return `<div class="li"><span class="pill priority-badge">#${g.number}</span><div class="grow"><b>${esc(g.name)}</b><div class="note">${count ? `公司库已收录 ${count} 条` : "暂无已核验招聘记录"} · ${check}</div>${g.website ? `<a href="${safeURL(g.website)}" target="_blank" rel="noopener noreferrer">你提供的官网入口</a>` : `<span class="note">官网入口待核实</span>`}</div></div>`; }).join("")}</div><button class="btn" data-act="closeModal">关闭</button>`, true);
