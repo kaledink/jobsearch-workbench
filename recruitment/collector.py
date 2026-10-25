@@ -27,6 +27,8 @@ CITIES = ['北京', '上海', '深圳', '广州', '香港']
 CATEGORIES = ['政府机关/事业单位', '高校教职、辅导员、博士后', '国企央企']
 AUTO_SOURCE = '每日招聘'
 ROOT = Path(__file__).resolve().parent
+sys.path.insert(0, str(ROOT))
+from priority import REGISTRY, annotate_priority, daily_batch, find_group, official_domains
 
 
 class ModelResponseError(RuntimeError):
@@ -78,7 +80,7 @@ def deadline_at(row):
 def priority(row, at=None):
     at = at or now()
     deadline = deadline_at(row)
-    return (deadline or datetime.max.replace(tzinfo=TZ), -row.get('score', 0), 0 if row.get('city') == '北京' else 1, vacancy_id(row))
+    return (deadline or datetime.max.replace(tzinfo=TZ), 0 if row.get('priorityNumber') else 1, -row.get('score', 0), 0 if row.get('city') == '北京' else 1, vacancy_id(row))
 
 
 def quoted(value, text):
@@ -153,7 +155,46 @@ def fetch_public(url):
 
 def official(url, config):
     host = (urlparse(url).hostname or '').lower()
-    return any(host == suffix or host.endswith('.' + suffix) for suffix in config['officialSuffixes'])
+    return any(host == suffix or host.endswith('.' + suffix) for suffix in config['officialSuffixes'] + official_domains())
+
+
+def discover_priority(config, year, cursor=0, extra_numbers=()):
+    batch = daily_batch(cursor, 20, extra_numbers)
+    def check(group):
+        links = {}; read = False
+        query = f'"{group["name"]}" {year} 校园招聘 应届生 报名 截止'
+        try:
+            _, raw, _, _ = fetch_public('https://www.bing.com/search?' + urlencode({'format': 'rss', 'q': query}))
+            for item in ET.fromstring(raw).findall('.//item'):
+                link = item.findtext('link', ''); title = item.findtext('title', '')
+                if official(link, config) and re.search('招聘|招录|校园|应届', title): links[link] = title
+        except Exception: pass
+        if group['website']:
+            try:
+                # Upgrade user-supplied HTTP entrances without weakening TLS checks.
+                source = group['website'].replace('http://', 'https://', 1)
+                final, raw, _, enc = fetch_public(source)
+                if official(final, config):
+                    read = True
+                    indexes = listing_links(final, raw, enc, config)
+                    for link, label in indexes[:8]: links.setdefault(link, label)
+                    for index, _ in indexes[:2]:
+                        try:
+                            final, content, _, enc = fetch_public(index)
+                            if official(final, config):
+                                for link, label in listing_links(final, content, enc, config)[:8]: links.setdefault(link, label)
+                        except Exception: pass
+            except Exception: pass
+        return group['number'], read, list(links)
+    results = []
+    with concurrent.futures.ThreadPoolExecutor(max_workers=4) as pool:
+        results = list(pool.map(check, batch))
+    # Round-robin URLs, so one large group cannot consume the entire daily page budget.
+    urls = []
+    for position in range(6):
+        for _, _, links in results:
+            if len(links) > position and links[position] not in urls: urls.append(links[position])
+    return urls, {'priorityBatch': [g['number'] for g in batch], 'priorityChecked': [n for n, read, _ in results if read], 'priorityFailed': [n for n, read, _ in results if not read], 'priorityCursor': (cursor + 20) % 100}
 
 
 def parse_resource(url, data, content_type, encoding):
@@ -256,7 +297,8 @@ def model_extract(page, summary, token):
 分别逐项核对 major, education, cohort；未说明接受未毕业博士或2027届时不得臆测，标 unknown。其他硬性条件也须列出。
 party 和 age 条件先列 unknown，由本地资料核对，禁止猜测。经验、政治面貌、户籍等缺少证据也标 unknown。
 每个 evidence 引文必须逐字来自网页。deadline只填原文明确的完整年月日，deadlineTime只填明确截止时分，无则空；长期招聘用deadlineText。
-只输出JSON {"jobs":[{"name":"单位","title":"岗位","department":"部门","city":"北京","batch":"招聘批次","category":"政府机关/事业单位 或 高校教职、辅导员、博士后 或 国企央企","nature":"性质","deadline":"YYYY-MM-DD或空","deadlineTime":"HH:MM或空","deadlineText":"原文说法","score":0,"reason":"匹配理由","evidence":{"name":"单位原文","role":"岗位原文","city":"城市原文","deadline":"截止原文"},"requirements":[{"kind":"major|education|cohort|party|age|experience|other","quote":"条件原文","result":"met|unmet|unknown","reason":"依据","maxAge":null,"minAge":null,"ageAsOf":"YYYY-MM-DD或空","ageReferenceQuote":"年龄计算日期原文"}]}]}。
+央企优先提取应届生和校园招聘，集团、总部和成员单位必须区分。parentGroup仅按明确的隶属关系原文填写，不能凭行业或名称猜测。
+只输出JSON {"jobs":[{"name":"实际招聘单位","title":"岗位","department":"部门","city":"北京","batch":"招聘批次","parentGroup":"上级集团或空","parentGroupQuote":"明确隶属关系原文或空","campusQuote":"校园招聘或应届生原文或空","category":"政府机关/事业单位 或 高校教职、辅导员、博士后 或 国企央企","nature":"性质","deadline":"YYYY-MM-DD或空","deadlineTime":"HH:MM或空","deadlineText":"原文说法","score":0,"reason":"匹配理由","evidence":{"name":"单位原文","role":"岗位原文","city":"城市原文","deadline":"截止原文"},"requirements":[{"kind":"major|education|cohort|party|age|experience|other","quote":"条件原文","result":"met|unmet|unknown","reason":"依据","maxAge":null,"minAge":null,"ageAsOf":"YYYY-MM-DD或空","ageReferenceQuote":"年龄计算日期原文"}]}]}。
 没有合适岗位返回空数组。最多提取2个岗位；拒绝推测岗位存在。'''
     # Fit within GitHub Models' free input allowance without truncating facts silently.
     def estimate(text):
@@ -348,6 +390,13 @@ def validate_job(row, page, profile, at=None):
     if not isinstance(score, (int, float)) or isinstance(score, bool): return None
     if score < 75: return None
     row.update(score=min(100, int(score)), eligibility='review' if doubts or 'unknown' in results else 'qualified', doubts=doubts, sourceURL=page['url'], checkedAt=at.isoformat(), contentSHA256=page['sha256'])
+    row = annotate_priority(row, page['text'])
+    if row.get('priorityNumber'):
+        campus_quote = row.get('campusQuote', '')
+        confirmed = quoted(campus_quote, page['text']) and bool(re.search('校园|应届|毕业生|校招', campus_quote))
+        row['campusStatus'] = 'confirmed' if confirmed else 'review'
+        if not confirmed:
+            row['eligibility'] = 'review'; row['doubts'].append('应届生/校园招聘属性尚未核实')
     row['id'] = vacancy_id(row)
     return row
 
@@ -379,12 +428,17 @@ def merge_jobs(documents, qualified, review, report, at=None):
         # Machine-owned fields refresh; existing manual fields/notes/starred remain intact.
         record = {**generated, **old} if old.get('source') != AUTO_SOURCE else {**old, **generated, 'addedAt': old.get('addedAt', generated['addedAt'])}
         record.update(vacancies=list(vacancies.values()), verifiedAt=at.date().isoformat(), syncedAt=at.isoformat(), eligibility='qualified' if any(v.get('eligibility') == 'qualified' for v in active) else 'review')
+        groups = [v.get('priorityGroup') for v in active if v.get('priorityGroup')]
+        if groups and all(g['number'] == groups[0]['number'] for g in groups): record.update(priorityGroup=groups[0], priorityNumber=groups[0]['number'])
         docs[key] = record
     for key, value in docs.items():
         if key.startswith('companies/') and value.get('source') == AUTO_SOURCE and value.get('vacancies'):
             if all(deadline_at(v) and deadline_at(v) < at for v in value['vacancies']): value['status'] = 'closed'
             elif value.get('status') == 'closed': value['status'] = 'open'
     meta = dict(docs.get('meta/status', {})); meta.update(lastAttempt=at.isoformat(), lastRunStatus=report['status'], dailyPriority='deadline', dailyQualified=len(qualified), dailyReview=len(review), dailyNewVacancies=added, sourceSuccesses=report.get('sourceSuccesses', 0), sourceFailures=report.get('sourceFailures', 0), dailySummary=report['summary'])
+    for field in ['priorityBatch', 'priorityChecked', 'priorityFailed', 'priorityCursor']:
+        if field in report: meta[field] = report[field]
+    if 'priorityBatch' in report: meta['priorityCheckedAt'] = at.isoformat()
     if report['status'] in ('ok', 'partial'): meta.update(lastDaily=at.isoformat(), lastSuccessfulDay=at.date().isoformat() if report['status'] == 'ok' else meta.get('lastSuccessfulDay', ''))
     docs['meta/status'] = meta
     return docs
@@ -423,7 +477,23 @@ def run(client, config, force=False, snapshot=None):
     profile = docs.get('profile/main', {}); experiences = [v for k, v in docs.items() if k.startswith('experiences/')]
     summary = candidate_summary(profile, experiences)
     year_match = re.search(r'20\d{2}', summary['graduation']); year = year_match.group() if year_match else str(at.year + 1)
+    old_meta = docs.get('meta/status', {})
+    active_groups = set()
+    urgent_groups = []
+    for key, value in docs.items():
+        if key.startswith(('companies/', 'applications/')):
+            group = find_group(value.get('name') or value.get('company', ''))
+            if group and key.startswith('applications/'): active_groups.add(group['number'])
+            if group and key.startswith('companies/'):
+                for vacancy in value.get('vacancies') or [value]:
+                    deadline = deadline_at(vacancy)
+                    if deadline and 0 <= (deadline - at).total_seconds() <= 7 * 86400:
+                        urgent_groups.append((deadline, group['number']))
+    extras = list(dict.fromkeys([n for _, n in sorted(urgent_groups)] + sorted(active_groups)))[:10]
+    priority_urls, priority_stats = discover_priority(config, year, old_meta.get('priorityCursor', 0), extras)
     urls, stats = discover(config, year)
+    stats.update(priority_stats)
+    urls = list(dict.fromkeys(priority_urls + urls))
     pages = []
     with concurrent.futures.ThreadPoolExecutor(max_workers=3) as pool:
         for page in pool.map(lambda u: read_announcement(u, config), urls[:45]):

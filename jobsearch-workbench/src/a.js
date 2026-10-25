@@ -23,7 +23,7 @@ const S = {
   db: null, sample: null, mcp: null, dl: null, user: null, hostOK: false, ready: false, fatal: "",
   d: { profile: null, meta: null, resumes: [], experiences: [], companies: [], applications: [], tailored: [], analyses: [], queue: [] },
   view: "dash", appId: null, appTab: "match",
-  cf: { q: "", dir: "", open: true, star: false, sort: "dl", src: "", wait: false, eligibility: "" }, af: { q: "", status: "" },
+  cf: { q: "", dir: "", open: true, star: false, sort: "dl", src: "", wait: false, eligibility: "", priority: false }, af: { q: "", status: "" },
   busy: {}, logs: {}, profileDirty: false, tailorSel: {},
 };
 try { const v = localStorage.getItem("jd_view"); if (v && VIEWS.some(x => x[0] === v)) S.view = v; } catch (e) {}
@@ -52,6 +52,8 @@ function deadlineCompare(a, b) {
   if (ar !== br) return ar ? 1 : -1;
   const ad = deadlineInstant(companyDeadline(a)), bd = deadlineInstant(companyDeadline(b));
   if (ad !== bd) return ad < bd ? -1 : 1;
+  const ap = !!priorityGroupOf(a), bp = !!priorityGroupOf(b);
+  if (ap !== bp) return ap ? -1 : 1;
   return ((fitOf(b) || {}).score ?? b.score ?? -1) - ((fitOf(a) || {}).score ?? a.score ?? -1) || (String(b.cities || b.city || "").includes("北京") ? 1 : 0) - (String(a.cities || a.city || "").includes("北京") ? 1 : 0);
 }
 const isAutoCompany = c => ["Claude", "Codex", "每日招聘"].includes(c.source);
