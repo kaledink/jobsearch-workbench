@@ -30,6 +30,8 @@ class PriorityCompaniesTests(unittest.TestCase):
  def test_unrelated_institutions_and_domains_are_not_proof(self):
   self.assertIsNone(p.find_group('中国石油大学'))
   self.assertIsNone(p.find_group('中国电子学会'))
+  self.assertIsNone(p.find_group('中国农业发展银行'))
+  self.assertIsNone(p.find_group('招商银行'))
   self.assertIsNone(p.find_group('普通民营企业'))
   self.assertNotIn('priorityNumber',p.annotate_priority({'name':'普通民营企业','priorityNumber':99,'priorityGroup':{'number':99}}))
   value=p.annotate_priority({'name':'无关单位','sourceURL':'https://www.crhc.cn/'},'合作单位中国国新')

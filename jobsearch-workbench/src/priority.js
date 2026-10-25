@@ -8,7 +8,7 @@ function priorityGroupOf(row) {
   // Verified parent annotations must have supporting source text retained in the vacancy.
   const parent = row.priorityGroup;
   if (parent?.relationship === "公告确认的成员单位" && row.parentGroupQuote && row.parentGroup && row.priorityNumber === parent.number && PRIORITY_COMPANIES.some(g => g.number === parent.number && priorityAliases(g).includes(priorityName(row.parentGroup)))) return parent;
-  if (/大学|学会|协会/.test(name)) return null;
+  if (/大学|学会|协会|银行|保险|证券|期货/.test(name)) return null;
   const possible = PRIORITY_COMPANIES.map(g => ({ group: g, lengths: priorityAliases(g).filter(a => (a.length >= 3 || a === "华润") && name.startsWith(a)).map(a => a.length) })).filter(g => g.lengths.length).map(g => ({ ...g, length: Math.max(...g.lengths) })).sort((a, b) => b.length - a.length);
   if (possible.length && (possible.length === 1 || possible[0].length > possible[1].length)) { const g = possible[0].group; return { number: g.number, name: g.name, relationship: "疑似成员单位，待核实" }; }
   if (row.vacancies?.length) { const groups = row.vacancies.map(priorityGroupOf).filter(Boolean); if (groups.length && groups.every(g => g.number === groups[0].number)) return groups[0]; }

@@ -32,6 +32,7 @@ def run():
     assert page.evaluate('priorityGroupOf({name:"华润置地有限公司"}).number')==53
     assert page.evaluate('priorityGroupOf({name:"中国电子科技集团有限公司"}).number')==8
     assert page.evaluate('priorityGroupOf({name:"中国电子信息产业集团有限公司"}).number')==29
+    assert page.evaluate('priorityGroupOf({name:"中国农业发展银行"})') is None
     assert not errors,errors
     b.close();print('PASS: all 100 original numbers, prominent badges, priority-only filtering, old records auto-match, subsidiaries marked unverified, deadline priority retained, unrelated organizations not tagged.')
   finally:server.shutdown();server.server_close();worker.join()

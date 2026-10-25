@@ -28,7 +28,7 @@ def find_group(name, parent='', parent_verified=False):
         parents = [g for g in REGISTRY if key and key in aliases(g)]
         if len(parents) == 1:
             return {'number': parents[0]['number'], 'name': parents[0]['name'], 'relationship': '公告确认的成员单位'}
-    if re.search(r'大学|学会|协会', name):
+    if re.search(r'大学|学会|协会|银行|保险|证券|期货', name):
         return None
     possible = []
     for group in REGISTRY:
